@@ -374,3 +374,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--g)}
 input.wsrch{height:38px!important}
 @media (min-width:1150px){.ln.cw{display:flex;gap:14px;align-items:center}.ln.cw .ln-top{flex:1;min-width:0}.ln.cw .ln-f{flex:none;padding:0;flex-wrap:nowrap}.ln.cw .ln-top .lmenu{order:9}}
 .ln.cw{padding:8px 12px}
+.st0{background:var(--bg);color:var(--muted)}.st1{background:var(--bl);color:var(--b)}.st2{background:var(--gl);color:var(--g2)}.st3{background:var(--g2);color:#fff}.st4{background:#E8E8E8;color:#333}.st5{background:var(--rl);color:var(--red)}
+.shape{display:flex;flex-direction:column;gap:10px}
+.seg.sm button{padding:6px 11px;font-size:12.5px}
+.polyw{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:16px;align-items:start}
+.walls{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.wrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.wrow b{width:70px;font-size:13px}.wrow input{width:84px;height:34px}.wrow select{width:170px;height:34px}.wrow.cl .wclose{font-weight:800;color:var(--g2)}
+.psw{background:var(--gl);border-radius:12px;padding:6px}.psvg{width:100%;height:auto;display:block}
+.psvg polygon{fill:#fff;stroke:var(--g2);stroke-width:2.5;stroke-linejoin:round}.psvg circle{fill:var(--g2)}.psvg text{font:700 10px Montserrat,Arial;fill:var(--ink);text-anchor:middle}
+@media (max-width:900px){.polyw{grid-template-columns:1fr}}
+.pkr{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px}.pkr.miss{opacity:.55}.pkr .lno{width:24px;height:24px;border-radius:7px;background:var(--bg);color:var(--muted);font-size:12px;font-weight:800;display:grid;place-items:center;flex:none}
+.pkn{flex:1;display:flex;flex-direction:column}.pkn small{color:var(--muted);font-size:12px}.pkr .lf input{width:80px;height:32px}
+.docg{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.docb{display:flex;gap:12px;align-items:flex-start;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;cursor:pointer;font:inherit}.docb:hover{border-color:var(--g);background:var(--gl)}
+.docb .ic{color:var(--g2);margin-top:2px}.docb div{display:flex;flex-direction:column}.docb small{color:var(--muted);font-size:12px}
