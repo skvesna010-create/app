@@ -2035,6 +2035,65 @@ function invoice(p, yr){ var e = ents()[0] || {}, sum = (yr ? p[3] * 12 : p[2]),
 NAV[NAV.length - 1][1].push(['billing', 'coin', 'Тариф и оплата']); VPERM.billing = 'company';
 setTimeout(billingLoad, 2000);
 
+/* ================= АККУРАТНЫЙ ИНТЕРФЕЙС: меню-папки, профиль внизу, нижняя панель на телефоне, порядок вкладок ================= */
+Object.assign(ICO, { chev:'<path d="M9 6l6 6-6 6"/>', folder:'<path d="M3 7h6l2 2h10v10H3z"/>', money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', team:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5M16 4.5a3 3 0 0 1 0 6M18 14.5c1.6.6 2.7 2.4 3 5.5"/>', dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>' });
+var NAV2 = [
+  ['', '', [['home', 'home', 'Главная'], ['cal', 'cal', 'Календарь'], ['inbox', 'chat', 'Сообщения'], ['myworks', 'hard', 'Мои работы']]],
+  ['sales', 'Продажи', [['crm', 'funnel', 'Заявки'], ['clients', 'users', 'Клиенты'], ['stats', 'chart', 'Аналитика']]],
+  ['prod', 'Производство', [['objs', 'build', 'Объекты и сметы'], ['sched', 'cal', 'График работ'], ['buy', 'cart', 'Закупки'], ['stock', 'box', 'Склад']]],
+  ['money', 'Деньги', [['money', 'wallet', 'Финансы'], ['salary', 'coin', 'Зарплаты']]],
+  ['team', 'Команда', [['crew', 'team', 'Сотрудники'], ['access', 'lock', 'Доступы и роли']]],
+  ['set', 'Настройки', [['company', 'gear', 'Компания'], ['cat', 'book', 'Справочник цен'], ['billing', 'coin', 'Тариф и оплата'], ['data', 'db', 'Данные и копия']]]
+];
+VPERM.profile = ''; VPERM.data = 'company';
+var NAVHL = { obj:'objs', deal:'crm', emp:'salary', client:'clients', person:'crew', order:'buy', profile:'', billing:'billing' };
+function navOk(it){ var k = VPERM[it[0]]; if (it[0] === 'billing' && !SRV.on()) return false; if (it[0] === 'inbox' && !(REMOTE.chatReady && REMOTE.chatReady())) return can('chat') && SRV.on(); if (it[0] === 'myworks'){ var m = me(); return !!m.id && (m.role === 'master' || m.role === 'prorab' || S.objs.some(function(o){ return (o.rooms || []).some(function(r){ return (r.lines || []).some(function(l){ return l.who === m.id; }); }); })); } return !k || can(k) || (it[0] === 'salary' && lvl('salary')); }
+renderNav = function(){
+  var nav = $('#nav'), ft = $('#navf'), ui = uiGet(), closed = ui.navClosed || {}; nav.innerHTML = ''; ft.innerHTML = '';
+  NAV2.forEach(function(g){ var items = g[2].filter(navOk); if (!items.length) return;
+    var box = h('div', { class:'ngi' }); items.forEach(function(it){ box.appendChild(h('button', { class:'ni', 'data-v':it[0], onclick:function(){ go(it[0]); } }, [ic(it[1]), h('span', { text:it[2] })])); });
+    if (!g[0]){ nav.appendChild(box); return; }
+    var grp = h('div', { class:'ngr' + (closed[g[0]] ? ' cl' : ''), 'data-g':g[0] }, [h('button', { class:'ngh', onclick:function(){ var u = uiGet(), c = u.navClosed || {}; c[g[0]] = !c[g[0]]; u.navClosed = c; localStorage.setItem('dproUI', JSON.stringify(u)); grp.classList.toggle('cl', !!c[g[0]]); } }, [h('span', { text:g[1] }), ic('chev')]), box]);
+    nav.appendChild(grp); });
+  /* профиль внизу */
+  var m = me(), c = m.c || {}, nm = c.name || (SRV.on() && (SRV.get().user || {}).name) || 'Профиль', roleN = (AROLES.filter(function(r){ return r[0] === m.role; })[0] || [0, ''])[1];
+  var menu = h('div', { class:'umenu' }, [h('button', { class:'ni sm', onclick:function(){ go('profile'); } }, [ic('user'), h('span', { text:'Мой профиль' })]),
+    h('button', { class:'ni sm', onclick:function(){ var d = document.documentElement.classList.toggle('dark'); uiSet('dark', d); } }, [ic('moon'), h('span', { text:'Тёмная тема' })]),
+    !SRV.on() && !m.solo ? h('button', { class:'ni sm', onclick:function(){ localStorage.removeItem('dproMe'); loginScreen(); } }, [ic('team'), h('span', { text:'Сменить пользователя' })]) : null,
+    h('a', { class:'ni sm', href:'./?site', target:'_blank' }, [ic('link'), h('span', { text:'Сайт и тарифы' })]),
+    SRV.on() ? h('button', { class:'ni sm', onclick:function(){ if (!confirm('Выйти из учётной записи на этом устройстве?')) return; var x = SRV.get(); delete x.token; SRV.set(x); location.replace('./'); } }, [ic('out'), h('span', { text:'Выйти' })]) : null]);
+  var ub = h('button', { class:'ucard', onclick:function(){ ft.classList.toggle('open'); } }, [avatar(c.name ? c : { name:nm }), h('div', { class:'grow' }, [h('b', { text:nm }), h('small', { text:[roleN, SRV.on() ? (SRV.get().company || {}).name : ''].filter(Boolean).join(' · ') })]), ic('dots')]);
+  ft.appendChild(menu); ft.appendChild(ub); ft.appendChild(h('small', { class:'sv', id:'saved', text:SRV.on() ? 'Синхронизация…' : 'Данные в этом браузере' }));
+  var oldSv = $$('#side > .sv'); oldSv.forEach(function(x){ if (x.parentNode === $('#side')) x.remove(); });
+  var mb = $('#mnu'); mb.innerHTML = ''; mb.appendChild(ic('menu')); mb.onclick = function(){ document.body.classList.toggle('nav'); }; $('#scrim').onclick = function(){ document.body.classList.remove('nav'); };
+  /* нижняя панель на телефоне */
+  var bar = $('#mbar') || document.body.appendChild(h('nav', { id:'mbar', class:'mbar' })); bar.innerHTML = '';
+  [['home', 'home', 'Главная'], ['objs', 'build', 'Объекты'], ['cal', 'cal', 'Календарь'], ['inbox', 'chat', 'Чат']].filter(function(it){ return navOk(it); }).forEach(function(it){ bar.appendChild(h('button', { 'data-v':it[0], onclick:function(){ go(it[0]); } }, [ic(it[1]), h('span', { text:it[2] })])); });
+  bar.appendChild(h('button', { onclick:function(){ document.body.classList.add('nav'); } }, [ic('menu'), h('span', { text:'Меню' })]));
+  try { if (uiGet().dark) document.documentElement.classList.add('dark'); } catch(e){}
+  navBadges();
+};
+var goUI = go; go = function(v, a){ var r = goUI(v, a); var hl = NAVHL[v] != null ? NAVHL[v] : v; $$('#side [data-v], #mbar [data-v]').forEach(function(b){ b.classList.toggle('on', b.dataset.v === hl); }); var on = $('#side .ni.on'); if (on){ var g = on.closest('.ngr'); if (g) g.classList.remove('cl'); } $('#navf') && $('#navf').classList.remove('open'); return r; };
+var navBadges0 = navBadges; navBadges = function(){ navBadges0(); var n = 0; S.objs.forEach(function(o){ if (canChat(o)) n += unread(o); }); var b = $('#mbar [data-v="inbox"]'); if (b){ var x = b.querySelector('.bdg'); if (x) x.remove(); if (n) b.appendChild(h('span', { class:'bdg', text:String(n) })); } };
+/* вкладки объекта — в логичном порядке, одной строкой */
+var OT_ORDER = ['smeta', 'docs', 'stages', 'sched', 'mats', 'team', 'money', 'photos', 'chat', 'client'];
+OTABS.sort(function(a, b){ return OT_ORDER.indexOf(a[0]) - OT_ORDER.indexOf(b[0]); });
+OTABS.forEach(function(t){ if (t[0] === 'mats') t[1] = 'Материалы'; if (t[0] === 'team') t[1] = 'Мастера'; if (t[0] === 'client') t[1] = 'Кабинет клиента'; });
+/* «Компания» — по вкладкам вместо длинной ленты */
+var CTABS = [['main', 'Компания и бренд', ['Бренд и контакты', 'Логотип']], ['ents', 'Юрлица и документы', ['От кого заключаем', 'Документы']], ['clients', 'Для клиентов', ['Мессенджеры компании', 'Тексты для клиентов']], ['server', 'Сервер и кабинеты', ['Сервер Домилии', 'Постоянный кабинет']], ['log', 'История', ['История действий']]];
+var vCompanyZ = V.company;
+V.company = function(w, a){ var tab = a || 'main', tmp = h('div'); var realView = $('#view'); tmp.id = 'view'; realView.id = 'viewR'; realView.appendChild(tmp);
+  try { vCompanyZ(tmp); } finally { tmp.id = ''; realView.id = 'view'; }
+  var cur = 'main', parts = {}; Array.prototype.slice.call(tmp.children).forEach(function(el){ var t = (el.querySelector('h3') || el).textContent || ''; CTABS.forEach(function(c){ if (c[2].some(function(k){ return t.indexOf(k) === 0 || (el.tagName === 'DIV' && el.classList.contains('row') && t.indexOf(k) > -1); })) cur = c[0]; }); (parts[cur] = parts[cur] || []).push(el); });
+  tmp.remove(); title('Компания');
+  w.appendChild(h('div', { class:'tabs' }, CTABS.filter(function(c){ return parts[c[0]]; }).map(function(c){ return h('button', { class:c[0] === tab ? 'on' : '', text:c[1], onclick:function(){ go('company', c[0]); } }); })));
+  (parts[tab] || parts.main || []).forEach(function(el){ if (tab === 'server' && SRV.on() && /Постоянный кабинет клиента и переписка/.test(el.textContent.slice(0, 60))) return; w.appendChild(el); }); };
+/* шапка объекта: на телефоне свёрнута в одну строку */
+var vObjZ = V.obj;
+V.obj = function(w, a){ vObjZ(w, a); var o = byId(S.objs, String(a || '').split('|')[0]); if (!o) return; var head = w.querySelector('.card'); if (!head || head.querySelector('.tabs')) return;
+  var d = h('details', { class:'card ohead' }), sm = h('summary', {}, [h('b', { text:client(o.cid).name || 'Клиент не указан' }), h('span', { class:'pill ' + (o.status === 'В работе' ? 'g' : o.status === 'Черновик' ? '' : 'y'), text:o.status }), h('span', { text:[o.prorab ? 'прораб ' + crewName(o.prorab) : '', o.end ? 'сдача ' + fdate(o.end) : ''].filter(Boolean).join(' · ') }), ic('chev')]), inner = h('div', { class:'oin' });
+  while (head.firstChild) inner.appendChild(head.firstChild); d.appendChild(sm); d.appendChild(inner); if (window.innerWidth > 860 && !uiGet().ohead) d.open = true; d.ontoggle = function(){ if (window.innerWidth > 860) uiSet('ohead', d.open ? 0 : 1); }; head.replaceWith(d); };
+
 /* ================= запуск ================= */
 renderNav();
 try { if (JSON.parse(localStorage.getItem('dproUI') || '{}').dark) document.documentElement.classList.add('dark'); } catch(e){}
