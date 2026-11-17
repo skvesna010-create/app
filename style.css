@@ -40,7 +40,7 @@ button{font:inherit;cursor:pointer}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .f{display:grid;gap:5px;font-size:12.5px;font-weight:700;color:var(--muted)}
-input[type=text],input[type=number],input[type=url],textarea,select{width:100%;padding:8px 11px;border:1.5px solid var(--line);border-radius:9px;font:500 14px Montserrat,Arial,sans-serif;color:var(--ink);background:#fff;outline:none}
+input[type=text],input[type=number],input[type=url],.f>input[type=password],textarea,select{width:100%;padding:8px 11px;border:1.5px solid var(--line);border-radius:9px;font:500 14px Montserrat,Arial,sans-serif;color:var(--ink);background:#fff;outline:none}
 input:focus,textarea:focus,select:focus{border-color:var(--g)}
 textarea{min-height:90px;resize:vertical;line-height:1.45}
 textarea.mono{font:13px/1.5 Consolas,Menlo,monospace}
@@ -400,3 +400,6 @@ input.wsrch{height:38px!important}
 .fun{display:flex;flex-direction:column;gap:8px}.fr{display:grid;grid-template-columns:170px 1fr 110px;gap:12px;align-items:center;font-size:13.5px}.fr div{height:14px;background:var(--bg);border-radius:7px;overflow:hidden}.fr i{display:block;height:100%;background:var(--g)}.fr i.r{background:#E7A39A}.fr b{text-align:right}
 input[type=datetime-local]{width:100%;padding:8px 11px;border:1.5px solid var(--line);border-radius:9px;font:500 14px Montserrat,Arial,sans-serif;height:40px}
 @media (max-width:860px){.kb.k7{grid-template-columns:repeat(7,80vw)}.fr{grid-template-columns:110px 1fr 70px}}
+
+.chs{display:flex;flex-wrap:wrap;gap:6px}.chs .chip{border:1.5px solid var(--line);background:var(--card,#fff);padding:7px 13px;cursor:pointer;color:var(--ink);font:inherit;font-size:13px;font-weight:600}.chs .chip:hover{border-color:var(--g)}.chs .chip.on{background:var(--g2);border-color:var(--g2);color:#fff}
+.f>input,.f>select{align-self:start}
