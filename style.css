@@ -510,3 +510,6 @@ html.navmini .ucard{justify-content:center;padding:6px;background:none}html.navm
 .rotin{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}.rotin input{width:54px;height:34px}
 .strow{grid-template-columns:36px 1fr 170px 92px 80px 34px 28px}
 @media (max-width:860px){.strow{grid-template-columns:30px 1fr 110px 70px 28px}.peek{width:100vw}.pgrid{grid-template-columns:1fr}}
+
+/* панель заявки: этапы переносятся, полные названия */
+.stbar.sm{flex-wrap:wrap;overflow:visible;gap:4px}.stbar.sm button{flex:1 1 calc(33% - 4px);min-width:0;clip-path:none!important;border-radius:5px;font-size:12px;padding:7px 6px;white-space:nowrap}.stbar.sm button span{overflow:visible}.peek .ph small{display:block;white-space:normal}
