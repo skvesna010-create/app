@@ -3034,7 +3034,12 @@ function tabSmeta(w, o, totBox, refreshTot){
     if (!ks.length){ teamBox.appendChild(empty('Назначьте мастеров на работы — здесь появится, кто сколько заработает.')); return; }
     ks.forEach(function(k){ var b = C.byMaster[k], c = byId(S.crew, k); teamBox.appendChild(h('div', { class:'tm' + (k ? '' : ' none') }, [h('div', {}, [h('b', { text:c ? c.name : 'Не назначен' }), h('small', { text:c ? payName(c) : 'по ставкам справочника' })]), h('div', { class:'n' }, [h('b', { text:rub(b.all) }), h('small', { text:b.earned ? 'сделано на ' + rub(b.earned) : '' })])])); });
     teamBox.appendChild(h('div', { class:'tm tot2' }, [h('b', { text:'Всего зарплаты' }), h('b', { text:rub(C.labor) })])); }
-  var rt = function(){ refreshTot(); drawTeam(); };
+  var smTot = h('div', { class:'smtot' });
+  function updTot(){ var C = objCalc(o), nw = 0; (o.rooms || []).forEach(function(r){ nw += r.lines.length; }); smTot.innerHTML = '';
+    smTot.appendChild(h('div', { class:'smt-n' }, [h('small', { text:'Итого по смете' }), h('b', { text:rub(C.total) })]));
+    smTot.appendChild(h('div', { class:'smt-i' }, [h('span', { html:'<b>' + (o.rooms || []).length + '</b> ' + plural((o.rooms || []).length, 'помещение', 'помещения', 'помещений') }), h('span', { html:'<b>' + nw + '</b> ' + plural(nw, 'работа', 'работы', 'работ') }), C.area ? h('span', { html:'<b>' + num(C.area) + '</b> м² пола' }) : null, S.set.showPay && C.master ? h('span', { html:'мастерам <b>' + rub(C.master) + '</b>' }) : null]));
+    smTot.appendChild(h('span', { class:'sp' })); smTot.appendChild(btn('pdf', 'Смета клиенту', '', function(){ pdfDialog(o); })); }
+  var rt = function(){ refreshTot(); drawTeam(); updTot(); };
   side.appendChild(card('Итог сметы', [totBox, h('label', { class:'chk' }, [(function(){ var c = h('input', { type:'checkbox' }); c.checked = !o.noMats; c.onchange = function(){ o.noMats = !c.checked; save(); rt(); }; return c; })(), 'Материалы закупаем мы'])]));
   side.appendChild(card(h('h3', {}, ['Зарплаты по смете', h('span', { class:'sp' }), btn('', 'Расставить', 'lt xs', function(){ if (!S.crew.length) return toast('Сначала добавьте сотрудников'); var n = autoAssign(o); save(); toast(n ? 'Назначено работ: ' + n : 'Нет свободных строк или подходящих мастеров'); go('obj', o.id); })]), [teamBox, h('small', { class:'muted', text:'«Расставить» — назначит мастеров на работы без исполнителя по специальности: плитка — плиточнику, электрика — электрику и т. д.' })]));
   var oS = function(){ save(); rt(); };
@@ -3051,6 +3056,7 @@ function tabSmeta(w, o, totBox, refreshTot){
   var pay = h('input', { type:'checkbox' }); pay.checked = S.set.showPay; pay.onchange = function(){ S.set.showPay = pay.checked; save(); go('obj', o.id); };
   var allWho = whoSelect('', function(v){ if (!v) return; o.rooms.forEach(function(r){ r.lines.forEach(function(l){ l.who = v; }); }); save(); go('obj', o.id); });
   allWho.options[0].text = 'Мастер на всю смету…';
+  updTot(); main.appendChild(smTot);
   main.appendChild(h('div', { class:'smbar' }, [h('label', { class:'chk' }, [pay, 'Показывать зарплаты и маржу']), allWho,
     h('div', { class:'seg sm smv' }, [h('button', { class:S.set.smTbl ? '' : 'on', title:'Каждая работа — карточка с подписями', text:'Карточки', onclick:function(){ S.set.smTbl = 0; save(); go('obj', o.id); } }), h('button', { class:S.set.smTbl ? 'on' : '', title:'Одна работа — одна строка, как в Excel', text:'Таблица', onclick:function(){ S.set.smTbl = 1; save(); go('obj', o.id); } })]),
     btn('', o.collapsed ? 'Развернуть всё' : 'Свернуть всё', 'lt xs', function(){ o.collapsed = !o.collapsed; o.rooms.forEach(function(r){ r.fold = o.collapsed; }); save(); go('obj', o.id); }),
@@ -3060,7 +3066,7 @@ function tabSmeta(w, o, totBox, refreshTot){
   function drawRooms(){ roomsBox.innerHTML = ''; (o.rooms || []).forEach(function(r, ri){ roomsBox.appendChild(roomCard(o, r, ri, drawRooms, rt)); }); if (!o.rooms.length) roomsBox.appendChild(card(null, [empty('Добавьте первое помещение: размеры → программа сама посчитает площади пола, стен и потолка.')])); }
   var nr = sel({ v:'' }, 'v', [['', '+ Помещение…']].concat(D.rooms));
   nr.onchange = function(){ if (!nr.value) return; o.rooms.push({ id:uid(), name:nr.value, l:'', w:'', h:2.7, op:[{ w:0.8, h:2.0 }], lines:[] }); save(); drawRooms(); rt(); nr.value = ''; };
-  main.appendChild(roomsBox); main.appendChild(h('div', { class:'row' }, [nr]));
+  main.appendChild(roomsBox); main.appendChild(h('div', { class:'addroom' }, [ic('plus'), nr]));
   drawRooms(); drawTeam();
 }
 
@@ -3100,12 +3106,15 @@ function shapeEditor(r, onGeo){
   }
   return box;
 }
+var RGEO = {};
+function plural(n, a, b, c){ n = Math.abs(n) % 100; var m = n % 10; return n > 10 && n < 20 ? c : m === 1 ? a : m > 1 && m < 5 ? b : c; }
 function roomCard(o, r, ri, redraw, refreshTot){
+  var gTxt = null;
   var g = geo(r), gBox = h('div', { class:'geo' }), body = h('div'), showPay = S.set.showPay;
   function gDraw(){ g = geo(r); gBox.innerHTML = ''; [['Пол', g.floor, 'м²'], ['Стены', g.wall, 'м²'], ['Потолок', g.ceil, 'м²'], ['Периметр', g.perim, 'м']].forEach(function(x){ gBox.appendChild(h('span', {}, [x[0] + ' ', h('b', { text:num(x[1]) }), ' ' + x[2]])); }); }
   var sumEl = h('b', { class:'rs' }), labEl = h('small', { class:'rl' });
   function rsum(){ var s = 0, lb = 0; r.lines.forEach(function(ln){ var q = qty(ln, r); s += q * lp(ln, o); lb += lineLabor(ln, q, o); }); sumEl.textContent = rub(s); labEl.textContent = showPay && s ? 'зарплата ' + rub(lb) + ' · маржа ' + Math.round((1 - lb / s) * 100) + '%' : r.lines.length + ' работ'; }
-  function onGeo(){ gDraw(); $$('.ln', body).forEach(function(tr){ if (tr._upd) tr._upd(); }); rsum(); refreshTot(); }
+  function onGeo(){ gDraw(); if (gTxt) gFold(!!RGEO[r.id]); $$('.ln', body).forEach(function(tr){ if (tr._upd) tr._upd(); }); rsum(); refreshTot(); }
   var nm = h('input', { type:'text', class:'rn', value:r.name }); nm.oninput = function(){ r.name = nm.value; save(); };
   var dims = shapeEditor(r, onGeo);
   var opBox = h('div', { class:'ops' });
@@ -3143,9 +3152,15 @@ function roomCard(o, r, ri, redraw, refreshTot){
     body.appendChild(az);
   }
   drawLines(); gDraw(); rsum();
-  var inner = h('div', { class:'rbody' }, [dims, opBox, gBox, body]); if (r.fold) inner.style.display = 'none';
-  var tg = h('button', { class:'btn lt xs', title:r.fold ? 'Развернуть' : 'Свернуть', text:r.fold ? '▸' : '▾', onclick:function(){ r.fold = !r.fold; inner.style.display = r.fold ? 'none' : ''; tg.textContent = r.fold ? '▸' : '▾'; save(); } });
-  return h('div', { class:'card room' }, [h('div', { class:'rh' }, [tg, nm, h('div', { class:'rsw' }, [sumEl, labEl]), h('span', { class:'sp' }),
+  var ged = h('div', { class:'ged' }, [dims, opBox]), gTxt = h('span', { class:'gdim' }), gBtn = h('button', { class:'btn lt xs gtog' });
+  function gFold(open){ RGEO[r.id] = open ? 1 : 0; ged.style.display = open ? '' : 'none'; gBtn.textContent = open ? 'Скрыть размеры' : 'Изменить размеры'; var gg = geo(r);
+    gTxt.textContent = (r.mode || 'rect') === 'rect' && +r.l && +r.w ? num(+r.l) + ' × ' + num(+r.w) + (+r.h ? ' × ' + num(+r.h) : '') + ' м' : r.mode === 'poly' ? 'по стенам: ' + (r.poly || []).length + (r.poly && r.poly.length ? ' + 1' : '') : r.mode === 'area' ? 'по площади' : ''; }
+  gBtn.onclick = function(){ gFold(!RGEO[r.id]); };
+  var hasGeo = geo(r).floor > 0; gFold(RGEO[r.id] != null ? !!RGEO[r.id] : !hasGeo);
+  var gRow = h('div', { class:'grow' }, [ic('ruler'), gTxt, gBox, h('span', { class:'sp' }), gBtn]);
+  var inner = h('div', { class:'rbody' }, [gRow, ged, body]); if (r.fold) inner.style.display = 'none';
+  var tg = h('button', { class:'btn lt xs', title:r.fold ? 'Развернуть' : 'Свернуть', text:r.fold ? '▸' : '▾', onclick:function(){ r.fold = !r.fold; inner.style.display = r.fold ? 'none' : ''; tg.textContent = r.fold ? '▸' : '▾'; tg.closest('.room').classList.toggle('rfold', r.fold); save(); } });
+  return h('div', { class:'card room' + (r.fold ? ' rfold' : '') }, [h('div', { class:'rh' }, [tg, h('span', { class:'rno', text:String(ri + 1) }), nm, h('span', { class:'rcnt', text:r.lines.length ? r.lines.length + ' ' + plural(r.lines.length, 'работа', 'работы', 'работ') : 'нет работ' }), h('span', { class:'sp' }), h('div', { class:'rsw' }, [sumEl, labEl]),
     h('button', { class:'btn lt xs', title:'Выше', text:'↑', onclick:function(){ if (ri > 0){ o.rooms.splice(ri - 1, 0, o.rooms.splice(ri, 1)[0]); save(); redraw(); } } }),
     h('button', { class:'btn lt xs', title:'Копия помещения', onclick:function(){ var c = clone(r); c.id = uid(); c.name += ' (копия)'; c.lines.forEach(function(l){ l.id = uid(); l.done = false; }); o.rooms.splice(ri + 1, 0, c); save(); redraw(); refreshTot(); } }, [ic('copy')]), h('button', { class:'btn red xs', title:'Удалить помещение', onclick:function(){ if (confirm('Удалить «' + r.name + '»?')){ o.rooms.splice(ri, 1); save(); redraw(); refreshTot(); } } }, [ic('trash')])]), inner]);
 }
@@ -4931,7 +4946,7 @@ V.company = function(w, a){ var tab = a || 'main', tmp = h('div'); var realView 
 var vObjZ = V.obj;
 V.obj = function(w, a){ vObjZ(w, a); var o = byId(S.objs, String(a || '').split('|')[0]); if (!o) return; var head = w.querySelector('.card'); if (!head || head.querySelector('.tabs')) return;
   var d = h('details', { class:'card ohead' }), sm = h('summary', {}, [h('b', { text:client(o.cid).name || 'Клиент не указан' }), h('span', { class:'pill ' + (o.status === 'В работе' ? 'g' : o.status === 'Черновик' ? '' : 'y'), text:o.status }), h('span', { text:[o.prorab ? 'прораб ' + crewName(o.prorab) : '', o.end ? 'сдача ' + fdate(o.end) : ''].filter(Boolean).join(' · ') }), ic('chev')]), inner = h('div', { class:'oin' });
-  while (head.firstChild) inner.appendChild(head.firstChild); d.appendChild(sm); d.appendChild(inner); if (window.innerWidth > 860 && !uiGet().ohead) d.open = true; d.ontoggle = function(){ if (window.innerWidth > 860) uiSet('ohead', d.open ? 0 : 1); }; head.replaceWith(d); };
+  while (head.firstChild) inner.appendChild(head.firstChild); d.appendChild(sm); d.appendChild(inner); if (window.innerWidth > 860 && (uiGet().ohead2 === 1 || !o.cid)) d.open = true; d.ontoggle = function(){ if (window.innerWidth > 860) uiSet('ohead2', d.open ? 1 : 0); }; head.replaceWith(d); };
 
 /* ================= ТЕЛЕФОН: таблицы карточками, подписи к ячейкам ================= */
 var MOB = { q:0 };

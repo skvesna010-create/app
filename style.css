@@ -604,3 +604,34 @@ html.navmini .ucard{justify-content:center;padding:6px;background:none}html.navm
   .lns.tbl .ln.lnh::after{content:'';width:0}
   .lns.tbl .secr{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
 }
+
+/* ===== смета: понятная структура — итог сверху, помещения отдельными блоками ===== */
+.smtot{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:var(--ink,#1E2A24);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:10px}
+.smtot .smt-n{display:flex;flex-direction:column;line-height:1.15}.smtot .smt-n small{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;opacity:.7;font-weight:700}.smtot .smt-n b{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.smtot .smt-i{display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px;opacity:.85}.smtot .smt-i b{font-weight:800}
+.smtot .btn{background:var(--g2);border-color:var(--g2);color:#fff}
+.smbar{box-shadow:none;background:none;padding:0 2px;margin-bottom:16px;gap:8px}
+.smbar .chk{font-size:13px}
+.card.room{padding:0;overflow:hidden;margin-bottom:18px;border:1px solid #D6DFDA;box-shadow:0 1px 2px rgba(20,40,30,.05)}
+.room .rh{margin:0;padding:12px 16px;background:#F3F6F4;border-bottom:1px solid #DCE4DF;gap:10px}
+.room.rfold .rh{border-bottom:0}
+.room .rno{flex:none;width:26px;height:26px;border-radius:50%;background:var(--ink,#1E2A24);color:#fff;font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.room input.rn{font-size:19px;border-bottom-color:transparent;max-width:320px}.room input.rn:hover,.room input.rn:focus{border-bottom-color:var(--line)}
+.room .rcnt{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.room .rsw{align-items:flex-end;text-align:right;margin-right:6px}.room .rs{font-size:20px;color:var(--ink,#1E2A24);font-weight:800;font-variant-numeric:tabular-nums}
+.room .rbody{padding:12px 16px 0}
+.room .grow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;color:var(--muted)}
+.room .grow>.ic{opacity:.6}.room .gdim{font-weight:800;color:var(--ink,#1E2A24);font-size:14px}
+.room .grow .geo{margin:0;background:none;padding:0;gap:14px}
+.room .ged{background:#F8FAF9;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px}
+.room .ged .ops{margin:8px 0 0}
+.room .addz{margin:12px -16px 0;padding:12px 16px 14px;background:#F8FAF9;border-top:1px solid #E3E9E5}
+.addroom{display:flex;align-items:center;gap:8px;padding:12px 14px;border:1.5px dashed #C9D3CD;border-radius:10px;color:var(--muted)}
+.addroom select{width:auto;min-width:220px;font-weight:700}
+.lns.tbl .lf.s b{color:var(--ink,#1E2A24)}
+.lns.tbl .ln:nth-child(even):not(.lnh):not(.dn):not(.ex){background:#FBFCFB}
+@media (max-width:640px){.smtot{padding:12px 14px;gap:10px}.smtot .smt-n b{font-size:22px}.smtot .btn{width:100%;justify-content:center}.room .rh{padding:10px 12px}.room .rbody{padding:10px 12px 0}.room .addz{margin:10px -12px 0;padding:10px 12px}.room .rcnt{display:none}.room .grow .geo{gap:8px;font-size:12px}}
+.smbar select{max-width:210px}
+@media (max-width:640px){.room .rh{flex-wrap:wrap;row-gap:4px}.room input.rn{flex:1 1 0;min-width:0;width:auto;font-size:17px}.room .rh>.sp{display:none}.room .rsw{order:5;flex-basis:100%;flex-direction:row;align-items:baseline;gap:8px;text-align:left;margin:0}.room .rs{font-size:18px}}
+@media (min-width:641px){.room .rh{flex-wrap:nowrap}.room input.rn{flex:0 1 auto;min-width:90px;width:auto}.sm-lay:not(.tbl) .room .rcnt{display:none}.room .rsw{flex:none}}
+@media (max-width:640px){.smbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -12px 12px;padding:0 12px}.smbar::-webkit-scrollbar{display:none}.smbar>*{flex:none;white-space:nowrap}}
