@@ -535,7 +535,7 @@ function catPicker(r, after, onAdd){
 }
 function tabSmeta(w, o, totBox, refreshTot){
   S.set.showPay = S.set.showPay !== false;
-  var lay = h('div', { class:'sm-lay' }), main = h('div'), side = h('div', { class:'sm-side' });
+  var lay = h('div', { class:'sm-lay' + (S.set.smTbl ? ' tbl' : '') }), main = h('div'), side = h('div', { class:'sm-side' });
   lay.appendChild(main); lay.appendChild(side); w.appendChild(lay);
   var teamBox = h('div');
   function drawTeam(){ var C = objCalc(o); teamBox.innerHTML = ''; var ks = Object.keys(C.byMaster).sort(function(a, b){ return C.byMaster[b].all - C.byMaster[a].all; });
@@ -560,6 +560,7 @@ function tabSmeta(w, o, totBox, refreshTot){
   var allWho = whoSelect('', function(v){ if (!v) return; o.rooms.forEach(function(r){ r.lines.forEach(function(l){ l.who = v; }); }); save(); go('obj', o.id); });
   allWho.options[0].text = 'Мастер на всю смету…';
   main.appendChild(h('div', { class:'smbar' }, [h('label', { class:'chk' }, [pay, 'Показывать зарплаты и маржу']), allWho,
+    h('div', { class:'seg sm smv' }, [h('button', { class:S.set.smTbl ? '' : 'on', title:'Каждая работа — карточка с подписями', text:'Карточки', onclick:function(){ S.set.smTbl = 0; save(); go('obj', o.id); } }), h('button', { class:S.set.smTbl ? 'on' : '', title:'Одна работа — одна строка, как в Excel', text:'Таблица', onclick:function(){ S.set.smTbl = 1; save(); go('obj', o.id); } })]),
     btn('', o.collapsed ? 'Развернуть всё' : 'Свернуть всё', 'lt xs', function(){ o.collapsed = !o.collapsed; o.rooms.forEach(function(r){ r.fold = o.collapsed; }); save(); go('obj', o.id); }),
     btn('', o.bySec ? 'Без разделов' : 'По разделам', 'lt xs', function(){ o.bySec = !o.bySec; if (o.bySec){ var ord = {}; S.cat.works.forEach(function(w2, i){ if (ord[w2.sec] == null) ord[w2.sec] = i; }); o.rooms.forEach(function(r){ r.lines.sort(function(x, y){ return (ord[lineSec(x)] || 999) - (ord[lineSec(y)] || 999); }); }); } save(); go('obj', o.id); }),
     btn('', 'Обновить цены из справочника', 'lt xs', function(){ if (!confirm('Подставить во все строки текущие цены и ставки из справочника?')) return; var n = 0; o.rooms.forEach(function(r){ r.lines.forEach(function(l){ var c = workCat(l.wid); if (c){ l.price = c.price; l.mprice = c.mprice; n++; } }); }); logA('№' + o.num + ': цены обновлены из справочника'); save(); toast('Обновлено строк: ' + n); go('obj', o.id); })]));
@@ -621,7 +622,8 @@ function roomCard(o, r, ri, redraw, refreshTot){
   function addW(w, custom){ if (w) r.lines.push(lineFrom(w)); else { var u = prompt('Единица измерения (м², шт, м.п.)', 'шт') || 'шт', pr2 = +prompt('Цена для клиента за ' + u, '0') || 0; r.lines.push({ id:uid(), wid:'', name:custom, unit:u, price:pr2, mprice:Math.round(pr2 * 0.55), geo:'', qty:1, manual:true, who:'', done:false }); } }
   function after(){ save(); drawLines(); rsum(); refreshTot(); }
   function drawLines(){ body.innerHTML = '';
-    var list = h('div', { class:'lns' }), lastSec = null;
+    var list = h('div', { class:'lns' + (S.set.smTbl ? ' tbl' : '') }), lastSec = null;
+    if (S.set.smTbl && r.lines.length) list.appendChild(h('div', { class:'ln lnh' }, [h('div', { class:'ln-top' }, [h('span', { class:'lno', text:'№' }), h('div', { class:'ln-nm', text:'Работа' })]), h('div', { class:'ln-f' }, [h('span', { class:'lf q', text:'Кол-во' }), h('span', { class:'lf p', text:+o.wm ? 'Цена +' + o.wm + '%' : 'Цена, ₽' }), h('span', { class:'lf s', text:'Сумма' }), h('span', { class:'lf w', text:'Мастер' }), showPay ? h('span', { class:'lf z', text:'Зарплата' }) : null, h('span', { class:'lf d', text:'Гот.' })])]));
     r.lines.forEach(function(ln, li){ var sec = lineSec(ln); if (o.bySec && sec !== lastSec){ list.appendChild(h('div', { class:'secr', text:sec })); lastSec = sec; }
       var row = h('div', { class:'ln' + (ln.done ? ' dn' : '') + (ln.extra ? ' ex' : '') });
       var q = h('input', { type:'number', step:'0.01', class:'qi' + (ln.geo && !ln.manual ? ' auto' : ''), inputmode:'decimal' }); q.value = r2(qty(ln, r));
@@ -637,7 +639,7 @@ function roomCard(o, r, ri, redraw, refreshTot){
       var menu = h('select', { class:'lmenu', title:'Действия со строкой' }, [h('option', { value:'', text:'⋯' }), h('option', { value:'up', text:'↑ Выше' }), h('option', { value:'down', text:'↓ Ниже' }), h('option', { value:'dup', text:'Дублировать' }), h('option', { value:'note', text:'Комментарий для клиента' }), h('option', { value:'extra', text:ln.extra ? 'Убрать «доп. работа»' : 'Отметить как доп. работу' }), h('option', { value:'cat', text:'Цена из справочника' }), h('option', { value:'del', text:'Удалить' })]);
       menu.onchange = function(){ var a = menu.value; menu.value = ''; if (a === 'up' && li > 0){ r.lines.splice(li - 1, 0, r.lines.splice(li, 1)[0]); } else if (a === 'down' && li < r.lines.length - 1){ r.lines.splice(li + 1, 0, r.lines.splice(li, 1)[0]); } else if (a === 'dup'){ var c = clone(ln); c.id = uid(); c.done = false; r.lines.splice(li + 1, 0, c); } else if (a === 'note'){ var n = prompt('Комментарий (виден клиенту в смете)', ln.note || ''); if (n === null) return; ln.note = n; } else if (a === 'extra'){ ln.extra = !ln.extra; ln.extraAt = ln.extra ? today() : ''; } else if (a === 'cat'){ var cw = workCat(ln.wid); if (!cw) return toast('Этой работы нет в справочнике'); ln.price = cw.price; ln.mprice = cw.mprice; } else if (a === 'del'){ if (!confirm('Удалить «' + ln.name + '»?')) return; r.lines.splice(li, 1); } else return; after(); };
       function fld(lbl, el, cls){ return h('label', { class:'lf ' + (cls || '') }, [h('span', { text:lbl }), el]); }
-      row.appendChild(h('div', { class:'ln-top' }, [h('span', { class:'lno', text:li + 1 }), h('div', { class:'ln-nm' }, [nmI, ln.extra ? h('span', { class:'exb', text:'доп. работа' }) : null, (function(){ var k = (ln.name || '').trim().toLowerCase(), first = -1; r.lines.forEach(function(x, j){ if (first < 0 && (x.name || '').trim().toLowerCase() === k && !x.extra === !ln.extra) first = j; }); return k && first > -1 && first < li ? h('span', { class:'dupb', title:'Такая же работа уже есть в этом помещении (строка ' + (first + 1) + '). Проверьте, не задвоена ли она в смете.', text:'повтор строки ' + (first + 1) }) : null; })(), ln.note ? h('small', { class:'lnote', text:ln.note }) : null]), h('button', { class:'x', title:'Удалить', text:'×', onclick:function(){ if (confirm('Удалить «' + ln.name + '»?')){ r.lines.splice(li, 1); after(); } } }), menu]));
+      row.appendChild(h('div', { class:'ln-top' }, [h('span', { class:'lno', text:li + 1 }), h('div', { class:'ln-nm' }, [nmI, ln.extra ? h('span', { class:'exb', text:'доп. работа' }) : null, (function(){ var k = (ln.name || '').trim().toLowerCase(), first = -1; r.lines.forEach(function(x, j){ if (first < 0 && (x.name || '').trim().toLowerCase() === k && !x.extra === !ln.extra) first = j; }); return k && first > -1 && first < li ? h('span', { class:'dupb', title:'Такая же работа уже есть в этом помещении (строка ' + (first + 1) + '). Проверьте, не задвоена ли она в смете.', text:'повтор строки ' + (first + 1) }) : null; })(), (function(){ var cw = ln.wid && workCat(ln.wid), gp = cw && cw.grp; if (!gp) return null; var o2 = -1; r.lines.forEach(function(x, j){ if (o2 < 0 && j !== li && x.wid !== ln.wid){ var xw = x.wid && workCat(x.wid); if (xw && xw.grp === gp) o2 = j; } }); return o2 > -1 ? h('span', { class:'grpb', title:'В прайсе это взаимоисключающие варианты (' + gp.replace(/^ВЫБОР:\s*/, '') + '). На одной площади берут что-то одно.' + (cw.rule ? ' ' + cw.rule : ''), text:'выбрать одно со строкой ' + (o2 + 1) }) : null; })(), ln.note ? h('small', { class:'lnote', text:ln.note }) : null]), h('button', { class:'x', title:'Удалить', text:'×', onclick:function(){ if (confirm('Удалить «' + ln.name + '»?')){ r.lines.splice(li, 1); after(); } } }), menu]));
       row.appendChild(h('div', { class:'ln-f' }, [fld('Кол-во, ' + ln.unit, h('span', { class:'qw' }, [q, auto]), 'q'), fld(+o.wm ? 'Цена (+' + o.wm + '%)' : 'Цена, ₽', pr, 'p'), fld('Сумма', sm, 's'), fld('Мастер', who, 'w'), showPay ? fld('Зарплата', lab, 'z') : null, h('label', { class:'lf d' }, [h('span', { text:'Готово' }), dn])]));
       upd(); list.appendChild(row); });
     body.appendChild(list);
@@ -1154,23 +1156,25 @@ V.cat = function(w){
   if (tab === 'works'){
     var secs = []; S.cat.works.forEach(function(x){ if (secs.indexOf(x.sec) < 0) secs.push(x.sec); });
     var f = { sec:S.set.catSec || '', q:'' };
+    $('#barR').appendChild(btn('xls', 'Загрузить прайс из Excel', 'lt', function(){ priceImport(); }));
     $('#barR').appendChild(btn('plus', 'Раздел', 'lt', function(){ var n = prompt('Название раздела (например «Фасад»)'); if (!n) return; S.cat.works.unshift({ id:uid(), sec:n, name:'Новая работа', unit:'шт', price:0, mprice:0, geo:'', mats:[] }); S.set.catSec = n; save(); go('cat', 'works'); }));
     var q = h('input', { type:'search', placeholder:'Поиск работы по всему справочнику…' }), chips = h('div', { class:'chips cchips' }), box = h('div');
-    function drawChips(){ chips.innerHTML = ''; [['', 'Все разделы']].concat(secs.map(function(x){ return [x, x]; })).forEach(function(x){ var n = x[0] ? S.cat.works.filter(function(w2){ return w2.sec === x[0]; }).length : S.cat.works.length; chips.appendChild(h('button', { class:'chip sm' + (f.sec === x[0] ? ' on' : ''), onclick:function(){ f.sec = x[0]; S.set.catSec = x[0]; save(); drawChips(); draw(); } }, [x[1] + ' ', h('span', { class:'cn', text:n })])); }); }
+    function drawChips(){ chips.innerHTML = ''; if (secs.length > 14){ var ss = h('select', { class:'csel' }); [['', 'Все разделы (' + S.cat.works.length + ')']].concat(secs.map(function(x){ return [x, x + ' (' + S.cat.works.filter(function(w2){ return w2.sec === x; }).length + ')']; })).forEach(function(x){ ss.appendChild(h('option', { value:x[0], text:x[1] })); }); ss.value = f.sec; ss.onchange = function(){ f.sec = ss.value; S.set.catSec = f.sec; save(); draw(); }; chips.appendChild(ss); return; } [['', 'Все разделы']].concat(secs.map(function(x){ return [x, x]; })).forEach(function(x){ var n = x[0] ? S.cat.works.filter(function(w2){ return w2.sec === x[0]; }).length : S.cat.works.length; chips.appendChild(h('button', { class:'chip sm' + (f.sec === x[0] ? ' on' : ''), onclick:function(){ f.sec = x[0]; S.set.catSec = x[0]; save(); drawChips(); draw(); } }, [x[1] + ' ', h('span', { class:'cn', text:n })])); }); }
     function row(x){ var mg = h('span', { class:'mg' }); function upd(){ var m = x.price ? Math.round((1 - x.mprice / x.price) * 100) : 0; mg.textContent = x.price ? m + '%' : '—'; mg.className = 'mg ' + (m >= 40 ? 'ok' : m >= 25 ? '' : 'bad'); }
       var nm = h('textarea', { class:'lname', rows:'1' }); nm.value = x.name; function grow(){ nm.style.height = 'auto'; nm.style.height = nm.scrollHeight + 'px'; } nm.oninput = function(){ x.name = nm.value; save(); grow(); }; setTimeout(grow, 0);
       var mats = (x.mats || []).map(function(mr){ var m = byId(S.cat.mats, mr[0]); return m ? m.name.replace(/\s\d.*$/, '') : ''; }).filter(Boolean);
       var menu = h('select', { class:'lmenu' }, [h('option', { value:'', text:'⋯' }), h('option', { value:'mats', text:'Нормы расхода материалов' }), h('option', { value:'sec', text:'Перенести в другой раздел' }), h('option', { value:'dup', text:'Дублировать' }), h('option', { value:'del', text:'Удалить' })]);
       menu.onchange = function(){ var a = menu.value; menu.value = ''; if (a === 'mats') matsDialog(x); else if (a === 'sec'){ var n = prompt('Раздел: ' + secs.join(', '), x.sec); if (n){ x.sec = n; save(); go('cat', 'works'); } } else if (a === 'dup'){ var c = clone(x); c.id = uid(); c.name += ' (копия)'; S.cat.works.splice(S.cat.works.indexOf(x) + 1, 0, c); save(); draw(); } else if (a === 'del'){ if (confirm('Удалить «' + x.name + '» из справочника? В готовых сметах она останется.')){ S.cat.works.splice(S.cat.works.indexOf(x), 1); save(); draw(); } } };
       function fld(l, el, cls){ return h('label', { class:'lf ' + (cls || '') }, [h('span', { text:l }), el]); }
-      var r = h('div', { class:'ln cw' }, [h('div', { class:'ln-top' }, [h('div', { class:'ln-nm' }, [nm, h('small', { class:'lnote', text:mats.length ? 'Материалы: ' + mats.join(', ') : 'Материалы не привязаны' })]), menu]),
+      var r = h('div', { class:'ln cw' }, [h('div', { class:'ln-top' }, [h('div', { class:'ln-nm' }, [nm, h('small', { class:'lnote', text:[x.code, x.sub, x.est ? 'цена по смете' : '', mats.length ? 'Материалы: ' + mats.join(', ') : (x.code ? '' : 'Материалы не привязаны')].filter(Boolean).join(' · ') }), x.rule ? h('small', { class:'lnote rl', text:x.rule }) : null, x.grp && !x.rule ? h('small', { class:'lnote', text:'Один из вариантов: ' + x.grp.replace(/^ВЫБОР:\s*/, '').replace(/[-:]/g, ' ').toLowerCase() }) : null]), menu]),
         h('div', { class:'ln-f' }, [fld('Ед', inp(x, 'unit'), 'u'), fld('Цена клиенту, ₽', inp(x, 'price', 'number', upd), 'p'), fld('Ставка мастеру, ₽', inp(x, 'mprice', 'number', upd), 'p'), fld('Маржа', mg, 'm'), fld('Количество в смете', sel(x, 'geo', [['', 'вводится вручную'], ['floor', 'из площади пола'], ['wall', 'из площади стен'], ['ceil', 'из площади потолка'], ['perim', 'из периметра']]), 'g')])]);
       upd(); return r; }
-    function draw(){ box.innerHTML = ''; var s2 = f.q.toLowerCase(), show = f.q ? secs : f.sec ? [f.sec] : secs, any = 0;
-      show.forEach(function(sc){ var L = S.cat.works.filter(function(x){ return x.sec === sc && (!s2 || x.name.toLowerCase().indexOf(s2) > -1); }); if (!L.length) return; any++;
+    function draw(){ box.innerHTML = ''; var s2 = f.q.toLowerCase(), show = f.q ? secs : f.sec ? [f.sec] : secs, any = 0, left = 150;
+      if (!f.q && !f.sec && S.cat.works.length > 250){ var gl = h('div', { class:'secgrid' }); secs.forEach(function(sc){ var n = S.cat.works.filter(function(x){ return x.sec === sc; }).length; gl.appendChild(h('button', { class:'secb', onclick:function(){ f.sec = sc; S.set.catSec = sc; save(); drawChips(); draw(); } }, [h('b', { text:sc }), h('span', { text:n + ' работ' })])); }); box.appendChild(card('Разделы — выберите, чтобы открыть, или найдите работу поиском', [gl])); return; }
+      show.forEach(function(sc){ if (left <= 0) return; var L = S.cat.works.filter(function(x){ return x.sec === sc && (!s2 || x.name.toLowerCase().indexOf(s2) > -1 || (x.code || '').toLowerCase() === s2); }); if (!L.length) return; any++; if (f.q){ L = L.slice(0, left); left -= L.length; }
         var c = card(h('h3', {}, [sc, h('span', { class:'badge', text:L.length }), h('span', { class:'sp' }), btn('plus', 'Работа в «' + sc + '»', 'lt xs', function(){ var nw = { id:uid(), sec:sc, name:'Новая работа', unit:'м²', price:0, mprice:0, geo:'', mats:[] }; var i = S.cat.works.indexOf(L[L.length - 1]); S.cat.works.splice(i + 1, 0, nw); save(); draw(); })]), [h('div', { class:'lns' }, L.map(row))]); box.appendChild(c); });
       if (!any) box.appendChild(card(null, [empty('Ничего не найдено.')])); }
-    q.oninput = function(){ f.q = q.value; draw(); };
+    var qt; q.oninput = function(){ clearTimeout(qt); qt = setTimeout(function(){ f.q = q.value.trim().length > 1 ? q.value.trim() : ''; draw(); }, 200); };
     w.appendChild(card(null, [h('div', { class:'hint', text:'Цены — ориентир, поставьте свои. «Количество в смете» — откуда программа берёт объём: из площади пола, стен, потолка или периметра. В готовых сметах цены не меняются: новые цены попадут в новые сметы (или нажмите в смете «Обновить цены из справочника»).' }), q, chips]));
     w.appendChild(box); drawChips(); draw();
   } else if (tab === 'packs'){
@@ -2296,6 +2300,58 @@ function mailCard(w){ var c = card('Заявки на почту', [h('div', { c
     c.appendChild(h('label', { class:'chk' }, [(function(){ var x = h('input', { type:'checkbox' }); x.checked = m.on; x.onchange = function(){ m.on = x.checked; }; return x; })(), 'Отправлять заявки на почту']));
     c.appendChild(h('div', { class:'row' }, [btn('check', 'Сохранить', '', function(){ SRV.req('PUT', '/notify/mail', m).then(function(){ toast('Сохранено'); }, function(e){ toast(e.message); }); }), btn('', 'Отправить проверочное письмо', 'lt', function(){ res.innerHTML = '<div class="muted">Отправляем…</div>'; SRV.req('PUT', '/notify/mail', m).then(function(){ return SRV.req('POST', '/notify/mailtest', {}); }).then(function(){ res.innerHTML = ''; res.appendChild(h('div', { class:'hint g', text:'Письмо отправлено — проверьте ящик (и папку «Спам» в первый раз).' })); }, function(e){ res.innerHTML = ''; res.appendChild(h('div', { class:'hint r', text:e.message })); }); })]));
     c.appendChild(res); }, function(){ c.innerHTML = ''; c.appendChild(h('div', { class:'hint y', text:'Почту для заявок настраивает владелец или администратор.' })); }); }
+
+/* ================= ЗАГРУЗКА ПРАЙСА ИЗ EXCEL В СПРАВОЧНИК ================= */
+var PR_COLS = [['code', /^код/], ['sub', /подраздел/], ['sec', /^раздел|^категор/], ['name', /наименование|название|^работа/], ['unit', /^ед/], ['price', /цена клиент|^цена|стоимость/], ['mprice', /мастер|ставка|зарплат/], ['pt', /тип цены/], ['kind', /тип позиции/], ['grp', /взаимоискл/], ['rule', /правило/], ['st', /статус/], ['dup', /дубл/]];
+function prGeo(name, unit){ var n = name.toLowerCase(), u = unit.toLowerCase();
+  if (/^м²|^м2|кв/.test(u)){ if (/потол/.test(n)) return 'ceil'; if (/стен|откос|фартук/.test(n) && !/перегород|короб/.test(n)) return 'wall'; if (/(^|[^а-яё])пол(а|у|ом|е)?([^а-яё]|$)|стяжк|ламинат|линолеум|паркет|ковролин|наливн|инженерн.*доск|напольн/.test(n)) return 'floor'; }
+  if (/^м\.?\s?п|^пог/.test(u) && /плинтус|галтел|багет|молдинг/.test(n)) return /потол|багет|галтел/.test(n) ? '' : 'perim';
+  return ''; }
+function prParse(X, wb){
+  var best = null;
+  wb.SheetNames.forEach(function(sn){ var rows = X.utils.sheet_to_json(wb.Sheets[sn], { header:1, defval:'', raw:true });
+    for (var i = 0; i < Math.min(rows.length, 12); i++){ var hd = rows[i].map(function(c){ return String(c).trim().toLowerCase(); }), map = {};
+      PR_COLS.forEach(function(c){ for (var j = 0; j < hd.length; j++) if (hd[j] && c[1].test(hd[j]) && Object.keys(map).map(function(k){ return map[k]; }).indexOf(j) < 0){ map[c[0]] = j; break; } });
+      if (map.name != null && map.price != null){ var sc = (rows.length - i) + (/мастер|прайс/i.test(sn) ? 100000 : 0); if (!best || sc > best.sc) best = { sc:sc, sn:sn, rows:rows.slice(i + 1), map:map }; break; } } });
+  if (!best) return null;
+  var M = best.map, items = [], skip = 0, seen = {};
+  function g(r, k){ return M[k] == null ? '' : r[M[k]]; }
+  function n2(v){ if (typeof v === 'number') return v; var x = parseFloat(String(v).replace(/\s/g, '').replace(',', '.')); return isNaN(x) ? 0 : x; }
+  best.rows.forEach(function(r){ var name = String(g(r, 'name')).trim(); if (!name) return;
+    if (/архив/i.test(g(r, 'st')) || /архив/i.test(g(r, 'kind')) || /заменен/i.test(g(r, 'dup'))){ skip++; return; }
+    var code = String(g(r, 'code')).trim(), key = (code || name).toLowerCase(); if (seen[key]){ skip++; return; } seen[key] = 1;
+    var unit = String(g(r, 'unit')).trim().replace(/\.$/, '') || 'шт', price = Math.round(n2(g(r, 'price'))), est = /смет|индивид/i.test(g(r, 'pt')) || /индивид|спец/i.test(g(r, 'st'));
+    items.push({ code:code, sec:String(g(r, 'sec')).trim() || 'Прочее', sub:String(g(r, 'sub')).trim(), name:name, unit:unit, price:price, mprice:Math.round(n2(g(r, 'mprice'))), est:est && !price, grp:String(g(r, 'grp')).trim(), rule:String(g(r, 'rule')).trim(), pre:/предвар/i.test(g(r, 'st')) }); });
+  return { sheet:best.sn, items:items, skip:skip };
+}
+function prUsed(){ var u = {}, names = {};
+  S.objs.forEach(function(o){ (o.rooms || []).forEach(function(r){ (r.lines || []).forEach(function(l){ if (l.wid) u[l.wid] = 1; }); }); });
+  var P = allPacks(); Object.keys(P).forEach(function(k){ (P[k] || []).forEach(function(x){ names[(typeof x === 'string' ? x : x.n || '').toLowerCase()] = 1; }); });
+  return function(w){ return u[w.id] || names[(w.name || '').toLowerCase()]; }; }
+function priceImport(){
+  var file = h('input', { type:'file', accept:'.xlsx,.xls,.csv' }), out = h('div', { class:'col' }), box;
+  file.onchange = function(){ var f = file.files[0]; if (!f) return; out.innerHTML = ''; out.appendChild(h('p', { class:'muted', text:'Читаю файл…' }));
+    Promise.all([loadXLSX(), f.arrayBuffer()]).then(function(a){ var X = a[0], wb = X.read(new Uint8Array(a[1]), { type:'array' }), P = prParse(X, wb); out.innerHTML = '';
+      if (!P || !P.items.length){ out.appendChild(h('div', { class:'hint r', text:'Не нашёл таблицу с работами. Нужны столбцы «Наименование работы» и «Цена». Остальные (Код, Раздел, Ед., Оплата мастеру) — по желанию.' })); return; }
+      var byCode = {}, byName = {}; S.cat.works.forEach(function(w){ if (w.code) byCode[w.code.toLowerCase()] = w; byName[w.name.toLowerCase()] = w; });
+      var nNew = 0, nUpd = 0, hit = {}; P.items.forEach(function(it){ var w = (it.code && byCode[it.code.toLowerCase()]) || byName[it.name.toLowerCase()]; it.w = w; if (w){ nUpd++; hit[w.id] = 1; } else nNew++; });
+      var used = prUsed(), rest = S.cat.works.filter(function(w){ return !hit[w.id]; }), restFree = rest.filter(function(w){ return !used(w); });
+      var secs = {}; P.items.forEach(function(it){ secs[it.sec] = 1; });
+      var opt = { drop:true }, ck = h('input', { type:'checkbox', checked:true }); ck.onchange = function(){ opt.drop = ck.checked; };
+      out.appendChild(h('div', { class:'hint g', html:'Лист «' + esc(P.sheet) + '»: <b>' + P.items.length + '</b> работ в <b>' + Object.keys(secs).length + '</b> разделах.<br>Новых — ' + nNew + ', обновятся цены у ' + nUpd + '.' + (P.skip ? '<br>Пропущено ' + P.skip + ' (архивные, заменённые или повторы).' : '') + (P.items.some(function(i){ return i.est; }) ? '<br>Позиции «по смете» загрузятся с ценой 0 — цену ставите в смете вручную.' : '') }));
+      if (restFree.length) out.appendChild(h('label', { class:'chk' }, [ck, 'Убрать из справочника старые работы, которых нет в прайсе (' + restFree.length + ')' + (rest.length > restFree.length ? '. ' + (rest.length - restFree.length) + ' останутся — они уже стоят в сметах или наборах' : '')]));
+      out.appendChild(h('small', { class:'muted', text:'В готовых сметах цены не изменятся. Новые цены попадут в новые сметы, а в старой смете — по кнопке «Обновить цены из справочника».' }));
+      out.appendChild(h('div', { class:'row' }, [h('span', { class:'sp' }), btn('', 'Отмена', 'lt', function(){ box.remove(); }), btn('check', 'Загрузить ' + P.items.length + ' работ', '', function(){
+        var list = P.items.map(function(it){ var w = it.w || { id:uid(), mats:[] };
+          w.sec = it.sec; w.name = it.name; w.unit = it.unit; w.price = it.price; w.mprice = it.mprice || w.mprice || 0; w.code = it.code; w.sub = it.sub; w.grp = it.grp; w.rule = it.rule; w.est = it.est; w.pre = it.pre;
+          if (!it.w || w.geo == null) w.geo = prGeo(it.name, it.unit); w.mats = w.mats || []; return w; });
+        var keep = rest.filter(function(w){ return !opt.drop || used(w); });
+        S.cat.works = list.concat(keep); S.set.catSec = ''; save(); box.remove();
+        logA('Справочник: загружен прайс (' + list.length + ' работ)'); toast('Загружено ' + list.length + ' работ'); go('cat', 'works'); })]));
+    }).catch(function(e){ out.innerHTML = ''; out.appendChild(h('div', { class:'hint r', text:'Не получилось прочитать файл: ' + (e && e.message || e) + '. Нужен интернет — модуль Excel загружается при первом использовании.' })); });
+  };
+  box = dlg('Загрузить прайс из Excel', [h('p', { class:'muted', text:'Программа сама найдёт лист и столбцы: Код, Раздел, Подраздел, Наименование работы, Ед., Цена клиенту, Оплата мастеру, Группа взаимоисключения, Правило применения. Работы с тем же кодом или названием обновятся, новые — добавятся.' }), file, out]);
+}
 
 /* ================= АККУРАТНЫЙ ИНТЕРФЕЙС: меню-папки, профиль внизу, нижняя панель на телефоне, порядок вкладок ================= */
 Object.assign(ICO, { chev:'<path d="M9 6l6 6-6 6"/>', folder:'<path d="M3 7h6l2 2h10v10H3z"/>', money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', team:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5M16 4.5a3 3 0 0 1 0 6M18 14.5c1.6.6 2.7 2.4 3 5.5"/>', dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>' });
