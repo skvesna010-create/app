@@ -3027,7 +3027,7 @@ function catPicker(r, after, onAdd){
 }
 function tabSmeta(w, o, totBox, refreshTot){
   S.set.showPay = S.set.showPay !== false;
-  var lay = h('div', { class:'sm-lay' + (S.set.smTbl ? ' tbl' : '') }), main = h('div'), side = h('div', { class:'sm-side' });
+  var lay = h('div', { class:'sm-lay' + (isTbl() ? ' tbl' : '') }), main = h('div'), side = h('div', { class:'sm-side' });
   lay.appendChild(main); lay.appendChild(side); w.appendChild(lay);
   var teamBox = h('div');
   function drawTeam(){ var C = objCalc(o); teamBox.innerHTML = ''; var ks = Object.keys(C.byMaster).sort(function(a, b){ return C.byMaster[b].all - C.byMaster[a].all; });
@@ -3036,7 +3036,7 @@ function tabSmeta(w, o, totBox, refreshTot){
     teamBox.appendChild(h('div', { class:'tm tot2' }, [h('b', { text:'Всего зарплаты' }), h('b', { text:rub(C.labor) })])); }
   var smTot = h('div', { class:'smtot' });
   function updTot(){ var C = objCalc(o), nw = 0; (o.rooms || []).forEach(function(r){ nw += r.lines.length; }); smTot.innerHTML = '';
-    if (S.set.smTbl && window.innerWidth > 900){ smTot.className = 'smsum'; var pf = C.total - C.master - C.matsCost, mrow = function(c, n, a, b, d){ return h('tr', { class:c || '' }, [h('td', {}, [n]), h('td', { class:'n', text:a }), h('td', { class:'n', text:b }), (function(){ var td = h('td', { class:'n' }); if (d && d.nodeType) td.appendChild(d); else td.textContent = d; return td; })()]); };
+    if (isTbl() && window.innerWidth > 900){ smTot.className = 'smsum'; var pf = C.total - C.master - C.matsCost, mrow = function(c, n, a, b, d){ return h('tr', { class:c || '' }, [h('td', {}, [n]), h('td', { class:'n', text:a }), h('td', { class:'n', text:b }), (function(){ var td = h('td', { class:'n' }); if (d && d.nodeType) td.appendChild(d); else td.textContent = d; return td; })()]); };
       smTot.appendChild(h('div', { class:'sms-l' }, [h('div', { class:'sms-t' }, [h('span', { text:'Смета' }), h('b', { text:rub(C.total) })]), h('div', { class:'sms-i' }, [h('span', { html:'<b>' + (o.rooms || []).length + '</b> ' + plural((o.rooms || []).length, 'помещение', 'помещения', 'помещений') }), h('span', { html:'<b>' + nw + '</b> ' + plural(nw, 'работа', 'работы', 'работ') }), C.area ? h('span', { html:'<b>' + num(C.area) + '</b> м² пола' }) : null, C.area ? h('span', { html:'<b>' + rub(C.perM) + '</b> за м²' }) : null]),
         h('div', { class:'row' }, [btn('pdf', 'Смета клиенту', '', function(){ pdfDialog(o); }), btn('xls', 'Excel', 'lt', function(){ xlsClient(o); }), btn('xls', 'Задание мастерам', 'lt', function(){ xlsMasters(o); })])]));
       var tb = h('table', { class:'smst' }, [h('thead', {}, [h('tr', {}, [h('th'), h('th', { class:'n', text:'Себестоимость' }), h('th', { class:'n', text:'Для клиента' }), h('th', { class:'n', text:'Прибыль' })])]), h('tbody', {}, [
@@ -3068,7 +3068,7 @@ function tabSmeta(w, o, totBox, refreshTot){
   allWho.options[0].text = 'Мастер на всю смету…';
   updTot(); main.appendChild(smTot);
   main.appendChild(h('div', { class:'smbar' }, [h('label', { class:'chk' }, [pay, 'Показывать зарплаты и маржу']), allWho,
-    h('div', { class:'seg sm smv' }, [h('button', { class:S.set.smTbl ? '' : 'on', title:'Каждая работа — карточка с подписями', text:'Карточки', onclick:function(){ S.set.smTbl = 0; save(); go('obj', o.id); } }), h('button', { class:S.set.smTbl ? 'on' : '', title:'Одна работа — одна строка, как в Excel', text:'Таблица', onclick:function(){ S.set.smTbl = 1; save(); go('obj', o.id); } })]),
+    h('div', { class:'seg sm smv' }, [h('button', { class:isTbl() ? '' : 'on', title:'Каждая работа — карточка с подписями', text:'Карточки', onclick:function(){ S.set.smTbl = 0; save(); go('obj', o.id); } }), h('button', { class:isTbl() ? 'on' : '', title:'Одна работа — одна строка, как в Excel', text:'Таблица', onclick:function(){ S.set.smTbl = 1; save(); go('obj', o.id); } })]),
     btn('', o.collapsed ? 'Развернуть всё' : 'Свернуть всё', 'lt xs', function(){ o.collapsed = !o.collapsed; o.rooms.forEach(function(r){ r.fold = o.collapsed; }); save(); go('obj', o.id); }),
     btn('', o.bySec ? 'Без разделов' : 'По разделам', 'lt xs', function(){ o.bySec = !o.bySec; if (o.bySec){ var ord = {}; S.cat.works.forEach(function(w2, i){ if (ord[w2.sec] == null) ord[w2.sec] = i; }); o.rooms.forEach(function(r){ r.lines.sort(function(x, y){ return (ord[lineSec(x)] || 999) - (ord[lineSec(y)] || 999); }); }); } save(); go('obj', o.id); }),
     btn('', 'Обновить цены из справочника', 'lt xs', function(){ if (!confirm('Подставить во все строки текущие цены и ставки из справочника?')) return; var n = 0; o.rooms.forEach(function(r){ r.lines.forEach(function(l){ var c = workCat(l.wid); if (c){ l.price = c.price; l.mprice = c.mprice; n++; } }); }); logA('№' + o.num + ': цены обновлены из справочника'); save(); toast('Обновлено строк: ' + n); go('obj', o.id); })]));
@@ -3116,7 +3116,8 @@ function shapeEditor(r, onGeo){
   }
   return box;
 }
-var RGEO = {};
+var RGEO = {}, SMSEL = {};
+function isTbl(){ return S.set.smTbl !== 0 && window.innerWidth >= 1000; }
 function plural(n, a, b, c){ n = Math.abs(n) % 100; var m = n % 10; return n > 10 && n < 20 ? c : m === 1 ? a : m > 1 && m < 5 ? b : c; }
 function roomCard(o, r, ri, redraw, refreshTot){
   var gTxt = null;
@@ -3133,10 +3134,10 @@ function roomCard(o, r, ri, redraw, refreshTot){
   function addW(w, custom){ if (w) r.lines.push(lineFrom(w)); else { var u = prompt('Единица измерения (м², шт, м.п.)', 'шт') || 'шт', pr2 = +prompt('Цена для клиента за ' + u, '0') || 0; r.lines.push({ id:uid(), wid:'', name:custom, unit:u, price:pr2, mprice:Math.round(pr2 * 0.55), geo:'', qty:1, manual:true, who:'', done:false }); } }
   function after(){ save(); drawLines(); rsum(); refreshTot(); }
   function drawLines(){ body.innerHTML = '';
-    var list = h('div', { class:'lns' + (S.set.smTbl ? ' tbl' : '') }), lastSec = null;
-    if (S.set.smTbl && r.lines.length) list.appendChild(h('div', { class:'ln lnh' }, [h('div', { class:'ln-top' }, [h('span', { class:'lno', text:'№' }), h('div', { class:'ln-nm', text:'Работа' })]), h('div', { class:'ln-f' }, [h('span', { class:'lf q', text:'Кол-во' }), h('span', { class:'lf p', text:+o.wm ? 'Цена +' + o.wm + '%' : 'Цена, ₽' }), h('span', { class:'lf s', text:'Сумма' }), h('span', { class:'lf w', text:'Мастер' }), showPay ? h('span', { class:'lf z', text:'Зарплата' }) : null, h('span', { class:'lf d', text:'Гот.' })])]));
+    var list = h('div', { class:'lns' + (isTbl() ? ' tbl' : '') }), lastSec = null;
+    if (isTbl() && r.lines.length) list.appendChild(h('div', { class:'ln lnh' }, [h('div', { class:'ln-top' }, [h('span', { class:'lno', text:'№' }), h('div', { class:'ln-nm', text:'Работа' })]), h('div', { class:'ln-f' }, [h('span', { class:'lf q', text:'Кол-во' }), h('span', { class:'lf p', text:+o.wm ? 'Цена +' + o.wm + '%' : 'Цена, ₽' }), h('span', { class:'lf s', text:'Сумма' }), h('span', { class:'lf w', text:'Мастер' }), showPay ? h('span', { class:'lf z', text:'Зарплата' }) : null, h('span', { class:'lf d', text:'Гот.' })])]));
     r.lines.forEach(function(ln, li){ var sec = lineSec(ln); if (o.bySec && sec !== lastSec){ var ssum = r.lines.filter(function(x){ return lineSec(x) === sec; }).reduce(function(a, x){ return a + qty(x, r) * lp(x, o); }, 0); list.appendChild(h('div', { class:'secr' }, [h('span', { text:sec }), h('b', { text:rub(ssum) })])); lastSec = sec; }
-      var row = h('div', { class:'ln' + (ln.done ? ' dn' : '') + (ln.extra ? ' ex' : '') });
+      var row = h('div', { class:'ln' + (ln.done ? ' dn' : '') + (ln.extra ? ' ex' : '') + (SMSEL[ln.id] ? ' sel' : ''), 'data-lid':ln.id, 'data-li':li });
       var q = h('input', { type:'number', step:'0.01', class:'qi' + (ln.geo && !ln.manual ? ' auto' : ''), inputmode:'decimal' }); q.value = r2(qty(ln, r));
       var auto = ln.geo ? h('button', { class:'ab' + (ln.manual ? '' : ' on'), title:'Считать из размеров помещения', text:'авто', onclick:function(){ ln.manual = false; save(); q.classList.add('auto'); auto.classList.add('on'); upd(); } }) : null;
       q.oninput = function(){ ln.manual = true; ln.qty = +q.value; q.classList.remove('auto'); if (auto) auto.classList.remove('on'); save(); upd(); };
@@ -3150,10 +3151,10 @@ function roomCard(o, r, ri, redraw, refreshTot){
       var menu = h('select', { class:'lmenu', title:'Действия со строкой' }, [h('option', { value:'', text:'⋯' }), h('option', { value:'up', text:'↑ Выше' }), h('option', { value:'down', text:'↓ Ниже' }), h('option', { value:'dup', text:'Дублировать' }), h('option', { value:'note', text:'Комментарий для клиента' }), h('option', { value:'extra', text:ln.extra ? 'Убрать «доп. работа»' : 'Отметить как доп. работу' }), h('option', { value:'cat', text:'Цена из справочника' }), h('option', { value:'del', text:'Удалить' })]);
       menu.onchange = function(){ var a = menu.value; menu.value = ''; if (a === 'up' && li > 0){ r.lines.splice(li - 1, 0, r.lines.splice(li, 1)[0]); } else if (a === 'down' && li < r.lines.length - 1){ r.lines.splice(li + 1, 0, r.lines.splice(li, 1)[0]); } else if (a === 'dup'){ var c = clone(ln); c.id = uid(); c.done = false; r.lines.splice(li + 1, 0, c); } else if (a === 'note'){ var n = prompt('Комментарий (виден клиенту в смете)', ln.note || ''); if (n === null) return; ln.note = n; } else if (a === 'extra'){ ln.extra = !ln.extra; ln.extraAt = ln.extra ? today() : ''; } else if (a === 'cat'){ var cw = workCat(ln.wid); if (!cw) return toast('Этой работы нет в справочнике'); ln.price = cw.price; ln.mprice = cw.mprice; } else if (a === 'del'){ if (!confirm('Удалить «' + ln.name + '»?')) return; r.lines.splice(li, 1); } else return; after(); };
       function fld(lbl, el, cls){ return h('label', { class:'lf ' + (cls || '') }, [h('span', { text:lbl }), el]); }
-      row.appendChild(h('div', { class:'ln-top' }, [S.set.smTbl ? h('span', { class:'tyb r', title:'Работа', text:'Р' }) : null, h('span', { class:'lno', text:S.set.smTbl ? (ri + 1) + '.' + (li + 1) : li + 1 }), h('div', { class:'ln-nm' }, [nmI, ln.extra ? h('span', { class:'exb', text:'доп. работа' }) : null, (function(){ var k = (ln.name || '').trim().toLowerCase(), first = -1; r.lines.forEach(function(x, j){ if (first < 0 && (x.name || '').trim().toLowerCase() === k && !x.extra === !ln.extra) first = j; }); return k && first > -1 && first < li ? h('span', { class:'dupb', title:'Такая же работа уже есть в этом помещении (строка ' + (first + 1) + '). Проверьте, не задвоена ли она в смете.', text:'повтор строки ' + (first + 1) }) : null; })(), (function(){ var cw = ln.wid && workCat(ln.wid), gp = cw && cw.grp; if (!gp) return null; var o2 = -1; r.lines.forEach(function(x, j){ if (o2 < 0 && j !== li && x.wid !== ln.wid){ var xw = x.wid && workCat(x.wid); if (xw && xw.grp === gp) o2 = j; } }); return o2 > -1 ? h('span', { class:'grpb', title:'В прайсе это взаимоисключающие варианты (' + gp.replace(/^ВЫБОР:\s*/, '') + '). На одной площади берут что-то одно.' + (cw.rule ? ' ' + cw.rule : ''), text:'выбрать одно со строкой ' + (o2 + 1) }) : null; })(), ln.note ? h('small', { class:'lnote', text:ln.note }) : null]), h('button', { class:'x', title:'Удалить', text:'×', onclick:function(){ if (confirm('Удалить «' + ln.name + '»?')){ r.lines.splice(li, 1); after(); } } }), menu]));
+      row.appendChild(h('div', { class:'ln-top' }, [isTbl() ? h('span', { class:'grip', title:'Перетащите, чтобы поменять порядок', draggable:'true' }) : null, isTbl() ? h('input', { type:'checkbox', class:'lsel', title:'Выбрать строку', checked:!!SMSEL[ln.id] }) : null, isTbl() ? h('span', { class:'tyb r', title:'Работа', text:'Р' }) : null, h('span', { class:'lno', text:isTbl() ? (ri + 1) + '.' + (li + 1) : li + 1 }), h('div', { class:'ln-nm' }, [nmI, ln.extra ? h('span', { class:'exb', text:'доп. работа' }) : null, (function(){ var k = (ln.name || '').trim().toLowerCase(), first = -1; r.lines.forEach(function(x, j){ if (first < 0 && (x.name || '').trim().toLowerCase() === k && !x.extra === !ln.extra) first = j; }); return k && first > -1 && first < li ? h('span', { class:'dupb', title:'Такая же работа уже есть в этом помещении (строка ' + (first + 1) + '). Проверьте, не задвоена ли она в смете.', text:'повтор строки ' + (first + 1) }) : null; })(), (function(){ var cw = ln.wid && workCat(ln.wid), gp = cw && cw.grp; if (!gp) return null; var o2 = -1; r.lines.forEach(function(x, j){ if (o2 < 0 && j !== li && x.wid !== ln.wid){ var xw = x.wid && workCat(x.wid); if (xw && xw.grp === gp) o2 = j; } }); return o2 > -1 ? h('span', { class:'grpb', title:'В прайсе это взаимоисключающие варианты (' + gp.replace(/^ВЫБОР:\s*/, '') + '). На одной площади берут что-то одно.' + (cw.rule ? ' ' + cw.rule : ''), text:'выбрать одно со строкой ' + (o2 + 1) }) : null; })(), ln.note ? h('small', { class:'lnote', text:ln.note }) : null]), h('button', { class:'x', title:'Удалить', text:'×', onclick:function(){ if (confirm('Удалить «' + ln.name + '»?')){ r.lines.splice(li, 1); after(); } } }), menu]));
       row.appendChild(h('div', { class:'ln-f' }, [fld('Кол-во, ' + ln.unit, h('span', { class:'qw' }, [q, auto]), 'q'), fld(+o.wm ? 'Цена (+' + o.wm + '%)' : 'Цена, ₽', pr, 'p'), fld('Сумма', sm, 's'), fld('Мастер', who, 'w'), showPay ? fld('Зарплата', lab, 'z') : null, h('label', { class:'lf d' }, [h('span', { text:'Готово' }), dn])]));
       upd(); list.appendChild(row);
-      if (S.set.smTbl && !o.noMats){ var cw = workCat(ln.wid), mmk = 1 + (o.mm === '' || o.mm == null ? (+S.set.markup || 0) : +o.mm) / 100;
+      if (isTbl() && !o.noMats){ var cw = workCat(ln.wid), mmk = 1 + (o.mm === '' || o.mm == null ? (+S.set.markup || 0) : +o.mm) / 100;
         (cw && cw.mats || []).forEach(function(mr){ var mt = byId(S.cat.mats, mr[0]); if (!mt) return; var mq = h('span', { class:'lf q' }), mpz = h('span', { class:'lf p', text:rub(mt.price * mmk) }), ms = h('span', { class:'lf s' });
           function mu(){ var qq = qty(ln, r) * mr[1]; mq.textContent = r2(qq) + ' ' + mt.unit; ms.textContent = rub(qq * mt.price * mmk); }
           var mrow = h('div', { class:'ln mrow' }, [h('div', { class:'ln-top' }, [h('span', { class:'tyb m', title:'Материал (по норме расхода из справочника)', text:'М' }), h('span', { class:'lno' }), h('div', { class:'ln-nm mnm', text:mt.name })]), h('div', { class:'ln-f' }, [mq, mpz, ms, h('span', { class:'lf w' }), showPay ? h('span', { class:'lf z' }) : null, h('span', { class:'lf d' })])]);
@@ -3161,7 +3162,7 @@ function roomCard(o, r, ri, redraw, refreshTot){
     });
     body.appendChild(list);
     /* добавление работ */
-    var srch = workSearch(function(w, custom){ addW(w, custom); after(); setTimeout(function(){ var x = $('.wsrch', body); if (x) x.focus(); }, 30); });
+    var srch = workSearch(function(w, custom){ addW(w, custom); after(); setTimeout(function(){ var x = $('.wsrch', body); if (x) x.focus(); }, 30); }, r);
     var rw = whoSelect('', function(v){ if (!v) return; r.lines.forEach(function(l){ l.who = v; }); after(); }); rw.options[0].text = 'Мастер на всё помещение…';
     var az = h('div', { class:'addz' }, [srch, h('div', { class:'row' }, [btn('book', 'Из справочника', 'lt', function(){ catPicker(r, after); }), btn('layers', 'Набор работ', 'lt', function(){ packPicker(r, after, o); }), btn('plus', 'Своя работа', 'lt', function(){ var n = prompt('Название работы'); if (n){ addW(null, n); after(); } }), rw])]);
     if (!r.lines.length) body.appendChild(h('div', { class:'packq' }, [h('b', { text:'Быстрый старт — набор работ:' })].concat(Object.keys(allPacks()).map(function(k){ return h('button', { class:'chip sm', text:k + ' · ' + packItems(k).length, onclick:function(){ addPack(r, k); after(); } }); })).concat([h('button', { class:'chip sm', text:'+ создать набор', onclick:function(){ go('cat', 'packs'); } })])));
@@ -3176,7 +3177,7 @@ function roomCard(o, r, ri, redraw, refreshTot){
   var gRow = h('div', { class:'grow' }, [ic('ruler'), gTxt, gBox, h('span', { class:'sp' }), gBtn]);
   var inner = h('div', { class:'rbody' }, [gRow, ged, body]); if (r.fold) inner.style.display = 'none';
   var tg = h('button', { class:'btn lt xs', title:r.fold ? 'Развернуть' : 'Свернуть', text:r.fold ? '▸' : '▾', onclick:function(){ r.fold = !r.fold; inner.style.display = r.fold ? 'none' : ''; tg.textContent = r.fold ? '▸' : '▾'; tg.closest('.room').classList.toggle('rfold', r.fold); save(); } });
-  return h('div', { class:'card room' + (r.fold ? ' rfold' : '') }, [h('div', { class:'rh' }, [tg, h('span', { class:'rno', text:String(ri + 1) }), nm, h('span', { class:'rcnt', text:r.lines.length ? r.lines.length + ' ' + plural(r.lines.length, 'работа', 'работы', 'работ') : 'нет работ' }), h('span', { class:'sp' }), h('div', { class:'rsw' }, [sumEl, labEl]),
+  return h('div', { class:'card room' + (r.fold ? ' rfold' : ''), id:'room-' + r.id, 'data-rid':r.id }, [h('div', { class:'rh' }, [tg, h('span', { class:'rno', text:String(ri + 1) }), nm, h('span', { class:'rcnt', text:r.lines.length ? r.lines.length + ' ' + plural(r.lines.length, 'работа', 'работы', 'работ') : 'нет работ' }), h('span', { class:'sp' }), h('div', { class:'rsw' }, [sumEl, labEl]),
     h('button', { class:'btn lt xs', title:'Выше', text:'↑', onclick:function(){ if (ri > 0){ o.rooms.splice(ri - 1, 0, o.rooms.splice(ri, 1)[0]); save(); redraw(); } } }),
     h('button', { class:'btn lt xs', title:'Копия помещения', onclick:function(){ var c = clone(r); c.id = uid(); c.name += ' (копия)'; c.lines.forEach(function(l){ l.id = uid(); l.done = false; }); o.rooms.splice(ri + 1, 0, c); save(); redraw(); refreshTot(); } }, [ic('copy')]), h('button', { class:'btn red xs', title:'Удалить помещение', onclick:function(){ if (confirm('Удалить «' + r.name + '»?')){ o.rooms.splice(ri, 1); save(); redraw(); refreshTot(); } } }, [ic('trash')])]), inner]);
 }
@@ -4900,6 +4901,112 @@ function catFix(){ if (!S || !S.cat || !D.pv) return false; var ids = {}, byName
   if (ch) save(); return ch > 0; }
 catMigrate(); catFix();
 if (typeof applyRecs === 'function'){ var applyRecsP = applyRecs; applyRecs = function(L, st){ var n = applyRecsP(L, st); catMigrate(); catFix(); return n; }; }
+
+/* ================= СМЕТА: быстрый поиск, отмена, навигатор, выделение, перетаскивание ================= */
+var SM = { o:null }, SMQ = {}, WH = {};
+function smRe(){ if (!SM.o) return; var v = $('#view'), y = window.scrollY, vy = v ? v.scrollTop : 0; go('obj', SM.o.id); window.scrollTo(0, y); v = $('#view'); if (v) v.scrollTop = vy; }
+function smNorm(t){ return String(t || '').toLowerCase().replace(/ё/g, 'е'); }
+function smStem(t){ return t.length > 5 ? t.slice(0, -2) : t.length > 4 ? t.slice(0, -1) : t; }
+function smHay(w){ var c = WH[w.id]; if (!c || c[0] !== w.name){ c = WH[w.id] = [w.name, smNorm(w.name + ' ' + (w.code || '') + ' ' + (w.sec || '') + ' ' + (w.sub || ''))]; } return c[1]; }
+function smFind(q){ var U = S.set.wUse || {}, t = smNorm(q).split(/[\s,.;]+/).filter(Boolean).map(smStem);
+  if (!t.length) return S.cat.works.filter(function(w){ return U[w.id]; }).sort(function(a, b){ return U[b.id] - U[a.id]; }).slice(0, 12);
+  var out = [];
+  S.cat.works.forEach(function(w){ var hay = smHay(w); for (var k = 0; k < t.length; k++) if (hay.indexOf(t[k]) < 0) return;
+    var nm = smNorm(w.name), sc = 0; if (nm.indexOf(t[0]) === 0) sc += 6; if (w.code && smNorm(w.code) === smNorm(q).trim()) sc += 50;
+    t.forEach(function(x){ if (nm.indexOf(x) > -1) sc += 2; if (new RegExp('(^|[^а-яa-z0-9])' + x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(nm)) sc += 1; });
+    sc += Math.min(6, U[w.id] || 0); sc -= nm.length / 150; out.push([sc, w]); });
+  return out.sort(function(a, b){ return b[0] - a[0]; }).slice(0, 50).map(function(x){ return x[1]; }); }
+function smHi(name, q){ var t = smNorm(q).split(/[\s,.;]+/).filter(Boolean).map(smStem), s = esc(name), low = smNorm(s);
+  t.sort(function(a, b){ return b.length - a.length; }).forEach(function(x){ if (x.length < 2) return; var i = low.indexOf(x); if (i < 0) return; s = s.slice(0, i) + '\u0001' + s.slice(i, i + x.length) + '\u0002' + s.slice(i + x.length); low = smNorm(s); });
+  return s.replace(/\u0001/g, '<mark>').replace(/\u0002/g, '</mark>'); }
+/* поиск работы: вместо стандартного списка браузера — своё окно с ценой, единицей, кодом и стрелками */
+function workSearch(onPick, r){
+  var key = r ? r.id : '_', i = h('input', { type:'search', class:'wsrch', autocomplete:'off', spellcheck:'false', placeholder:'Найти работу: «плитка пол 60», «гидроизол», код FMT-021…' }), dd = h('div', { class:'wdd' }), res = [], cur = 0, open = false;
+  var wrap = h('span', { class:'wsw' }, [ic('plus'), i, h('span', { class:'wkb', text:'↑↓ Enter' }), dd]);
+  function close(){ open = false; dd.style.display = 'none'; }
+  function pick(w, keep){ var q = i.value; if (w){ S.set.wUse = S.set.wUse || {}; S.set.wUse[w.id] = (S.set.wUse[w.id] || 0) + 1; } SMQ[key] = keep ? q : ''; close(); onPick(w, w ? null : q.trim()); }
+  function draw(){ var q = i.value.trim(); res = smFind(q); cur = Math.min(cur, Math.max(0, res.length - 1)); dd.innerHTML = ''; open = true; dd.style.display = 'block';
+    var has = {}; (r && r.lines || []).forEach(function(l){ has[l.wid] = 1; });
+    dd.appendChild(h('div', { class:'wdh', text:q ? (res.length ? 'Найдено: ' + (res.length >= 50 ? '50+' : res.length) + ' · Enter — добавить, Shift+Enter — добавить и искать дальше' : 'В справочнике не нашлось') : (res.length ? 'Вы часто добавляете' : 'Начните печатать название работы или код') }));
+    res.forEach(function(w, k){ var el = h('div', { class:'wi' + (k === cur ? ' on' : '') }, [h('div', { class:'wi-n' }, [h('div', { html:smHi(w.name, q) }), h('small', { text:[w.sec, w.code, w.rule ? 'правило: ' + w.rule : ''].filter(Boolean).join(' · ') })]),
+        has[w.id] ? h('span', { class:'wi-has', text:'уже есть' }) : null, h('div', { class:'wi-p' }, [h('b', { text:w.est ? 'по смете' : rub(w.price) }), h('small', { text:'за ' + w.unit + (S.set.showPay && w.mprice ? ' · мастеру ' + rub(w.mprice) : '') })])]);
+      el.onmousedown = function(e){ e.preventDefault(); pick(w, e.shiftKey); }; el.onmouseenter = function(){ cur = k; $$('.wi', dd).forEach(function(x, j){ x.classList.toggle('on', j === k); }); };
+      dd.appendChild(el); });
+    if (q) dd.appendChild(h('div', { class:'wi wi-own', onmousedown:function(e){ e.preventDefault(); pick(null); } }, [ic('plus'), h('span', { html:'Добавить «<b>' + esc(q) + '</b>» как свою работу' + (res.length ? '' : ' — Enter') })]));
+    var on = $('.wi.on', dd); if (on) on.scrollIntoView({ block:'nearest' }); }
+  i.oninput = function(){ cur = 0; draw(); };
+  i.onfocus = function(){ draw(); };
+  i.onblur = function(){ setTimeout(close, 120); };
+  i.onkeydown = function(e){
+    if (e.key === 'ArrowDown'){ e.preventDefault(); if (!open) draw(); cur = Math.min(res.length - 1, cur + 1); draw(); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); cur = Math.max(0, cur - 1); draw(); }
+    else if (e.key === 'Enter'){ e.preventDefault(); var q = i.value.trim(); if (res[cur] && (q || res.length)) pick(res[cur], e.shiftKey); else if (q){ pick(null); } }
+    else if (e.key === 'Escape'){ if (i.value){ i.value = ''; draw(); } else { close(); i.blur(); } } };
+  if (SMQ[key]){ i.value = SMQ[key]; SMQ[key] = ''; setTimeout(function(){ if (document.activeElement === i) draw(); }, 60); }
+  return wrap;
+}
+/* ---------- отмена и повтор: Ctrl+Z / Ctrl+Shift+Z ---------- */
+var UNDO = { oid:null, st:[], rd:[], last:null, t:0 };
+function snapO(o){ return JSON.stringify({ rooms:o.rooms, wm:o.wm, mm:o.mm, disc:o.disc, discType:o.discType, discOn:o.discOn, discWhy:o.discWhy, noMats:o.noMats }); }
+function undoTick(){ clearTimeout(UNDO.t); UNDO.t = 0; var o = UNDO.oid && byId(S.objs, UNDO.oid); if (!o) return; var s = snapO(o); if (s === UNDO.last) return;
+  UNDO.st.push(UNDO.last); if (UNDO.st.length > 80) UNDO.st.shift(); UNDO.last = s; UNDO.rd = []; undoBtns(); smNav(); }
+function undoBtns(){ $$('.undob').forEach(function(b){ b.disabled = !UNDO.st.length; }); $$('.redob').forEach(function(b){ b.disabled = !UNDO.rd.length; }); }
+function undoDo(redo){ if (UNDO.t) undoTick(); var o = UNDO.oid && byId(S.objs, UNDO.oid); if (!o) return; var from = redo ? UNDO.rd : UNDO.st, to = redo ? UNDO.st : UNDO.rd;
+  if (!from.length) return toast(redo ? 'Нечего повторять' : 'Нечего отменять'); to.push(UNDO.last); UNDO.last = from.pop(); Object.assign(o, JSON.parse(UNDO.last)); saveU(); smRe(); toast(redo ? 'Повторено' : 'Отменено'); }
+var saveU = save;
+save = function(){ saveU(); if (UNDO.oid){ clearTimeout(UNDO.t); UNDO.t = setTimeout(undoTick, 450); } };
+document.addEventListener('keydown', function(e){
+  if (!SM.o || !$('.smbar')) return; var k = (e.key || '').toLowerCase(), mod = e.ctrlKey || e.metaKey, t = e.target, typing = /INPUT|TEXTAREA|SELECT/.test(t.tagName) && t.type !== 'checkbox';
+  if (mod && (k === 'z' || k === 'я') && !typing){ e.preventDefault(); undoDo(e.shiftKey); return; }
+  if (mod && (k === 'y' || k === 'н') && !typing){ e.preventDefault(); undoDo(true); return; }
+  if (k === 'escape' && Object.keys(SMSEL).length && !typing){ SMSEL = {}; smRe(); return; }
+  /* Enter в количестве или цене — к той же ячейке следующей строки */
+  if (k === 'enter' && (t.classList.contains('qi') || t.classList.contains('pi')) && t.closest('.lns.tbl')){ e.preventDefault(); var cls = t.classList.contains('qi') ? '.qi' : '.pi', all = $$('.lns.tbl .ln[data-lid] ' + cls), ix = all.indexOf(t), nx = all[ix + (e.shiftKey ? -1 : 1)]; if (nx){ nx.focus(); nx.select && nx.select(); } else t.blur(); }
+});
+/* ---------- навигатор по помещениям ---------- */
+function smNav(){ var bar = $('.smnav'); if (!bar || !SM.o) return; var o = smO(); bar.innerHTML = '';
+  (o.rooms || []).forEach(function(r, ri){ var s = r.lines.reduce(function(a, l){ return a + qty(l, r) * lp(l, o); }, 0);
+    bar.appendChild(h('button', { class:'nvr', title:'Перейти к помещению', onclick:function(){ var el = document.getElementById('room-' + r.id); if (el){ if (r.fold){ var tg = $('.rh .btn', el); if (tg) tg.click(); } el.scrollIntoView({ behavior:'smooth', block:'start' }); } } }, [h('span', { class:'rno', text:String(ri + 1) }), h('span', { class:'nvn', text:r.name || 'Помещение' }), h('b', { text:rub(s) })])); });
+  bar.appendChild(h('span', { class:'sp' }));
+  bar.appendChild(h('button', { class:'btn lt xs undob', title:'Отменить (Ctrl+Z)', disabled:!UNDO.st.length, onclick:function(){ undoDo(false); } }, ['↶ Отменить']));
+  bar.appendChild(h('button', { class:'btn lt xs redob', title:'Повторить (Ctrl+Shift+Z)', disabled:!UNDO.rd.length, onclick:function(){ undoDo(true); } }, ['↷']));
+  bar.appendChild(h('b', { class:'nvt', text:rub(objCalc(o).total) })); }
+/* ---------- выделение строк и действия над несколькими ---------- */
+var SMLAST = null;
+function smO(){ var o = SM.o && byId(S.objs, SM.o.id); if (o) SM.o = o; return o; }
+function smFindLine(id){ var o = smO(); if (!o) return null; for (var i = 0; i < o.rooms.length; i++){ var r = o.rooms[i]; for (var j = 0; j < r.lines.length; j++) if (r.lines[j].id === id) return { r:r, i:j, l:r.lines[j] }; } return null; }
+function smBulk(){ var bar = $('#smbulk'), ids = Object.keys(SMSEL).filter(function(id){ return smFindLine(id); });
+  if (!ids.length || !SM.o || !$('.smbar')){ if (bar) bar.remove(); return; }
+  if (!bar){ bar = h('div', { id:'smbulk' }); document.body.appendChild(bar); } bar.innerHTML = '';
+  var o = smO(); var rooms = o.rooms.map(function(r, ri){ return [r.id, (ri + 1) + '. ' + r.name]; });
+  var who = whoSelect('', function(v){ if (!v) return; ids.forEach(function(id){ smFindLine(id).l.who = v; }); save(); smRe(); }); who.options[0].text = 'Назначить мастера…';
+  var mv = h('select', {}, [h('option', { value:'', text:'Перенести в…' })].concat(rooms.map(function(x){ return h('option', { value:x[0], text:x[1] }); }))); mv.onchange = function(){ var o = smO(), to = byId(o.rooms, mv.value); if (!to) return; ids.forEach(function(id){ var f = smFindLine(id); f.r.lines.splice(f.i, 1); to.lines.push(f.l); }); save(); smRe(); toast('Перенесено в «' + to.name + '»'); };
+  var cp = h('select', {}, [h('option', { value:'', text:'Копировать в…' })].concat(rooms.map(function(x){ return h('option', { value:x[0], text:x[1] }); }))); cp.onchange = function(){ var o = smO(), to = byId(o.rooms, cp.value); if (!to) return; ids.forEach(function(id){ var c = clone(smFindLine(id).l); c.id = uid(); c.done = false; c.manual = false; to.lines.push(c); }); SMSEL = {}; save(); smRe(); toast('Скопировано в «' + to.name + '» — объёмы пересчитаны по его размерам'); };
+  bar.appendChild(h('b', { text:'Выбрано: ' + ids.length })); bar.appendChild(who); bar.appendChild(mv); bar.appendChild(cp);
+  bar.appendChild(btn('check', 'Отметить готовыми', 'lt xs', function(){ ids.forEach(function(id){ var l = smFindLine(id).l; l.done = true; l.doneAt = l.doneAt || today(); }); save(); smRe(); }));
+  bar.appendChild(h('button', { class:'btn red xs', onclick:function(){ if (!confirm('Удалить выбранные строки (' + ids.length + ')? Отменить можно Ctrl+Z.')) return; ids.forEach(function(id){ var f = smFindLine(id); if (f) f.r.lines.splice(f.i, 1); }); SMSEL = {}; save(); smRe(); } }, [ic('trash'), 'Удалить']));
+  bar.appendChild(h('button', { class:'btn lt xs', title:'Снять выделение (Esc)', text:'✕', onclick:function(){ SMSEL = {}; smRe(); } })); }
+document.addEventListener('click', function(e){ var c = e.target.closest && e.target.closest('input.lsel'); if (!c) return; var row = c.closest('.ln[data-lid]'); if (!row) return; var id = row.getAttribute('data-lid');
+  if (e.shiftKey && SMLAST){ var all = $$('.lns.tbl .ln[data-lid]').map(function(x){ return x.getAttribute('data-lid'); }), a = all.indexOf(SMLAST), b = all.indexOf(id); if (a > -1 && b > -1){ all.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(function(x){ SMSEL[x] = 1; }); $$('.lns.tbl .ln[data-lid]').forEach(function(x){ var on = !!SMSEL[x.getAttribute('data-lid')]; x.classList.toggle('sel', on); var cb = $('input.lsel', x); if (cb) cb.checked = on; }); } }
+  else { if (c.checked) SMSEL[id] = 1; else delete SMSEL[id]; row.classList.toggle('sel', c.checked); }
+  SMLAST = id; smBulk(); }, true);
+/* ---------- перетаскивание строк, в том числе в другое помещение ---------- */
+var SMDRAG = null;
+document.addEventListener('dragstart', function(e){ var g = e.target.closest && e.target.closest('.grip'); if (!g) return; var row = g.closest('.ln[data-lid]'); SMDRAG = row.getAttribute('data-lid'); row.classList.add('drag'); try { e.dataTransfer.setData('text/plain', SMDRAG); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setDragImage(row, 20, 16); } catch(x){} });
+document.addEventListener('dragover', function(e){ if (!SMDRAG) return; var row = e.target.closest && e.target.closest('.lns.tbl .ln[data-lid]'); $$('.ln.dropb,.ln.dropa').forEach(function(x){ if (x !== row) x.classList.remove('dropb', 'dropa'); }); if (!row) return; e.preventDefault(); var b = row.getBoundingClientRect(), after = e.clientY > b.top + b.height / 2; row.classList.toggle('dropa', after); row.classList.toggle('dropb', !after); });
+document.addEventListener('drop', function(e){ if (!SMDRAG) return; var row = e.target.closest && e.target.closest('.lns.tbl .ln[data-lid]'); if (!row) return; e.preventDefault(); var after = row.classList.contains('dropa'), tid = row.getAttribute('data-lid'), f = smFindLine(SMDRAG); SMDRAG = null; if (!f || tid === f.l.id) return smRe();
+  f.r.lines.splice(f.i, 1); var t = smFindLine(tid); t.r.lines.splice(t.i + (after ? 1 : 0), 0, f.l); if (t.r !== f.r){ f.l.manual = false; toast('Перенесено в «' + t.r.name + '»'); } save(); smRe(); });
+document.addEventListener('dragend', function(){ if (SMDRAG){ SMDRAG = null; } $$('.ln.drag,.ln.dropb,.ln.dropa').forEach(function(x){ x.classList.remove('drag', 'dropb', 'dropa'); }); });
+/* ---------- подключение к вкладке «Смета» ---------- */
+OTF.smeta = function(w, o, totBox, refreshTot){
+  if (!SM.o || SM.o.id !== o.id){ SMSEL = {}; UNDO = { oid:o.id, st:[], rd:[], last:snapO(o), t:0 }; }
+  var fixed = 0; (o.rooms || []).forEach(function(r){ if (!r.id){ r.id = uid(); fixed++; } (r.lines || []).forEach(function(l){ if (!l.id){ l.id = uid(); fixed++; } }); }); if (fixed) saveU();
+  SM.o = o; UNDO.oid = o.id; if (!UNDO.last) UNDO.last = snapO(o);
+  tabSmeta(w, o, totBox, refreshTot);
+  var sb = $('.smbar', w); if (sb) sb.parentNode.insertBefore(h('div', { class:'smnav' }), sb.nextSibling);
+  smNav(); smBulk();
+};
+var goSm = go; go = function(v, a){ var r = goSm.apply(this, arguments); if (!$('.smbar')){ var b = $('#smbulk'); if (b) b.remove(); } return r; };
 
 /* ================= АККУРАТНЫЙ ИНТЕРФЕЙС: меню-папки, профиль внизу, нижняя панель на телефоне, порядок вкладок ================= */
 Object.assign(ICO, { chev:'<path d="M9 6l6 6-6 6"/>', folder:'<path d="M3 7h6l2 2h10v10H3z"/>', money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', team:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5M16 4.5a3 3 0 0 1 0 6M18 14.5c1.6.6 2.7 2.4 3 5.5"/>', dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>' });
