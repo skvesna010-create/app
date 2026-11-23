@@ -305,7 +305,7 @@ var TPL_DEF = {
   followups:'2|Отправить кейс похожей квартиры|{name}, добрый день! Посмотрите, как мы сделали похожую квартиру — пришлю фото и смету. Если удобно, покажу этот объект вживую.\n5|Пригласить на живой объект|{name}, у нас сейчас идёт ремонт рядом с вами. Можем показать объект в процессе — так лучше всего видно качество. Когда вам удобно?\n10|Напомнить о сроке расчёта|{name}, напоминаю: расчёт по вашей квартире действует до {until}. Дальше цены на материалы могут измениться. Записать вас на бесплатный замер?',
   quick:'Приветствие|{name}, здравствуйте! Меня зовут {manager}, я менеджер компании «{company}». Подскажите, какой ремонт планируете и какая площадь квартиры?\nЗамер|{name}, давайте назначим бесплатный замер — инженер приедет, всё измерит и за 1 день подготовит точную смету. Когда вам удобно?\nСсылка на смету|{name}, подготовил смету по вашей квартире и всё о том, как мы работаем: {link}\nПосле замера|{name}, спасибо за встречу! Точную смету подготовлю сегодня и пришлю ссылкой. Если появятся вопросы — пишите, я на связи.\nЖивой объект|{name}, можем показать объект, где сейчас идёт ремонт — так лучше всего видно качество работ. Когда вам удобно?\nПопросить отзыв|{name}, как вам результат? Нам очень важно ваше мнение — это 1 минута: {link}',
   guarantees:'Гарантия на все работы — прописана в договоре\nФиксированная смета: цена не растёт в процессе\nОплата поэтапно — платите только за выполненный этап\nФото- и видеоотчёты с объекта\nСобственные бригады, без субподряда\nВывоз мусора и уборка после ремонта',
-  steps:'Бесплатный замер|Инженер приезжает в удобное время, делает обмеры и фото, обсуждает пожелания\nТочная смета за 1 день|Фиксируем цену и сроки — дальше они не меняются\nДоговор|Гарантия, этапы, сроки и штрафы за просрочку — на бумаге\nРемонт с отчётами|Фото и видео с объекта, доступ к странице объекта\nПриёмка по этапам|Принимаете каждый этап, платите только за готовое',
+  steps:'Бесплатный замер|Инженер приезжает в удобное время, делает обмеры и фото, обсуждает пожелания\nТочная смета за 1 день|Фиксируем цену и сроки — дальше они не меняются\nДоговор|Гарантия, этапы, сроки и штрафы за просрочку — подписываете на бумаге или прямо в кабинете\nРемонт с отчётами|Фото и видео с объекта, доступ к странице объекта\nПриёмка по этапам|Принимаете каждый этап, платите только за готовое',
   welcome:'Мы подготовили смету по вашей квартире и собрали всё о том, как мы работаем. Если что-то непонятно — напишите вашему менеджеру, он на связи.',
   hours:'Ежедневно 9:00–21:00', offerDays:7
 };
@@ -589,7 +589,7 @@ function shapeEditor(r, onGeo){
   var box = h('div', { class:'shape' }), mode = r.mode || 'rect';
   var seg = h('div', { class:'seg sm' }); [['rect', 'Прямоугольная'], ['poly', 'Любая форма (по стенам)'], ['area', 'Знаю площадь']].forEach(function(m){ seg.appendChild(h('button', { class:mode === m[0] ? 'on' : '', text:m[1], onclick:function(){ r.mode = m[0]; if (m[0] === 'poly' && !(r.poly || []).length){ var l = +r.l || 4, w = +r.w || 3; r.poly = [{ len:l, turn:90 }, { len:w, turn:90 }, { len:l, turn:90 }, { len:w, turn:0 }]; } if (m[0] === 'area' && !r.af) r.af = r2((+r.l || 0) * (+r.w || 0)) || ''; save(); var nb = shapeEditor(r, onGeo); box.replaceWith(nb); onGeo(); } })); });
   box.appendChild(seg);
-  var hI = field('Высота потолка, м', inp(r, 'h', 'number', onGeo, { step:'0.01' }));
+  var hI = field('Высота, м', inp(r, 'h', 'number', onGeo, { step:'0.01' }));
   if (mode === 'rect') box.appendChild(h('div', { class:'dims' }, [ic('ruler'), field('Длина, м', inp(r, 'l', 'number', onGeo, { step:'0.01' })), h('span', { class:'x', text:'×' }), field('Ширина, м', inp(r, 'w', 'number', onGeo, { step:'0.01' })), h('span', { class:'x', text:'×' }), hI]));
   else if (mode === 'area') box.appendChild(h('div', { class:'dims' }, [field('Площадь пола, м²', inp(r, 'af', 'number', onGeo, { step:'0.01' })), field('Периметр, м', inp(r, 'ap', 'number', onGeo, { step:'0.01', placeholder:'≈ посчитаю' })), field('Площадь стен, м²', inp(r, 'aw', 'number', onGeo, { step:'0.01', placeholder:'посчитаю' })), field('Потолок, м²', inp(r, 'ac', 'number', onGeo, { step:'0.01', placeholder:'= пол' })), hI]));
   else {
@@ -637,7 +637,7 @@ function roomCard(o, r, ri, redraw, refreshTot){
       var menu = h('select', { class:'lmenu', title:'Действия со строкой' }, [h('option', { value:'', text:'⋯' }), h('option', { value:'up', text:'↑ Выше' }), h('option', { value:'down', text:'↓ Ниже' }), h('option', { value:'dup', text:'Дублировать' }), h('option', { value:'note', text:'Комментарий для клиента' }), h('option', { value:'extra', text:ln.extra ? 'Убрать «доп. работа»' : 'Отметить как доп. работу' }), h('option', { value:'cat', text:'Цена из справочника' }), h('option', { value:'del', text:'Удалить' })]);
       menu.onchange = function(){ var a = menu.value; menu.value = ''; if (a === 'up' && li > 0){ r.lines.splice(li - 1, 0, r.lines.splice(li, 1)[0]); } else if (a === 'down' && li < r.lines.length - 1){ r.lines.splice(li + 1, 0, r.lines.splice(li, 1)[0]); } else if (a === 'dup'){ var c = clone(ln); c.id = uid(); c.done = false; r.lines.splice(li + 1, 0, c); } else if (a === 'note'){ var n = prompt('Комментарий (виден клиенту в смете)', ln.note || ''); if (n === null) return; ln.note = n; } else if (a === 'extra'){ ln.extra = !ln.extra; ln.extraAt = ln.extra ? today() : ''; } else if (a === 'cat'){ var cw = workCat(ln.wid); if (!cw) return toast('Этой работы нет в справочнике'); ln.price = cw.price; ln.mprice = cw.mprice; } else if (a === 'del'){ if (!confirm('Удалить «' + ln.name + '»?')) return; r.lines.splice(li, 1); } else return; after(); };
       function fld(lbl, el, cls){ return h('label', { class:'lf ' + (cls || '') }, [h('span', { text:lbl }), el]); }
-      row.appendChild(h('div', { class:'ln-top' }, [h('span', { class:'lno', text:li + 1 }), h('div', { class:'ln-nm' }, [nmI, ln.extra ? h('span', { class:'exb', text:'доп. работа' }) : null, ln.note ? h('small', { class:'lnote', text:ln.note }) : null]), h('button', { class:'x', title:'Удалить', text:'×', onclick:function(){ if (confirm('Удалить «' + ln.name + '»?')){ r.lines.splice(li, 1); after(); } } }), menu]));
+      row.appendChild(h('div', { class:'ln-top' }, [h('span', { class:'lno', text:li + 1 }), h('div', { class:'ln-nm' }, [nmI, ln.extra ? h('span', { class:'exb', text:'доп. работа' }) : null, (function(){ var k = (ln.name || '').trim().toLowerCase(), first = -1; r.lines.forEach(function(x, j){ if (first < 0 && (x.name || '').trim().toLowerCase() === k && !x.extra === !ln.extra) first = j; }); return k && first > -1 && first < li ? h('span', { class:'dupb', title:'Такая же работа уже есть в этом помещении (строка ' + (first + 1) + '). Проверьте, не задвоена ли она в смете.', text:'повтор строки ' + (first + 1) }) : null; })(), ln.note ? h('small', { class:'lnote', text:ln.note }) : null]), h('button', { class:'x', title:'Удалить', text:'×', onclick:function(){ if (confirm('Удалить «' + ln.name + '»?')){ r.lines.splice(li, 1); after(); } } }), menu]));
       row.appendChild(h('div', { class:'ln-f' }, [fld('Кол-во, ' + ln.unit, h('span', { class:'qw' }, [q, auto]), 'q'), fld(+o.wm ? 'Цена (+' + o.wm + '%)' : 'Цена, ₽', pr, 'p'), fld('Сумма', sm, 's'), fld('Мастер', who, 'w'), showPay ? fld('Зарплата', lab, 'z') : null, h('label', { class:'lf d' }, [h('span', { text:'Готово' }), dn])]));
       upd(); list.appendChild(row); });
     body.appendChild(list);
@@ -862,7 +862,7 @@ function allLines(o, f){ var L = []; o.rooms.forEach(function(r){ r.lines.forEac
 function gantt(o){ var st = o.stages.filter(function(s){ return s.plan; }), start = o.start || (st[0] && st[0].plan) || today(), end = o.end || (st.length ? st[st.length - 1].plan : today()); var a = new Date(start).getTime(), b = Math.max(new Date(end).getTime(), a + 864e5), prev = a;
   return '<div class="gantt">' + o.stages.map(function(s){ var e = s.plan ? new Date(s.plan).getTime() : prev, l = (prev - a) / (b - a) * 100, w = Math.max(2, (e - prev) / (b - a) * 100); prev = e; return '<div class="gr"><span>' + esc(s.name) + '</span><div class="gb"><i style="left:' + l + '%;width:' + w + '%"></i></div></div>'; }).join('') + '</div>'; }
 var DOCS = [
-  ['contract', 'Договор подряда на ремонт', 'Основной договор с приложениями: смета, график, порядок оплаты'],
+  ['contract', 'Договор подряда на ремонт', 'Основной договор и порядок оплаты по этапам'],
   ['smeta', 'Смета', 'Приложение №1 к договору'],
   ['graph', 'График производства работ', 'Приложение №2: этапы, сроки, оплата'],
   ['measure', 'Акт замера', 'Размеры и площади помещений'],
@@ -889,9 +889,12 @@ function tabDocs(w, o){
     e.kind === 'sz' && C.total > 2400000 ? h('div', { class:'hint r', text:'Сумма договора больше 2,4 млн ₽ — это выше годового лимита дохода самозанятого. Оформите договор от ООО или ИП.' }) : null,
     h('div', { class:'grid2' }, [field('Срок начала работ', inp(o, 'start', 'date')), field('Срок окончания', inp(o, 'end', 'date'))]),
     h('h4', { text:'Заказчик' }), clientFields(cl, function(){ go('obj', o.id + '|docs'); }),
-    miss.length ? h('div', { class:'hint y', html:'Не заполнено: <b>' + miss.join(', ') + '</b>. В документах будут пустые строки для ручного заполнения.' }) : h('div', { class:'hint g', text:'Все данные для документов заполнены.' })]));
+    miss.length ? h('div', { class:'hint y' }, [h('div', { html:'Не заполнено: <b>' + miss.join(', ') + '</b>. В документах будут пустые строки для ручного заполнения.' }), miss.some(function(m){ return /исполнител|самозанят/.test(m); }) ? h('div', { class:'row', style:'margin-top:8px' }, [btn('gear', 'Заполнить реквизиты компании', 'lt xs', function(){ go('company', 'ents'); })]) : null]) : h('div', { class:'hint g', text:'Все данные для документов заполнены.' })]));
   var g = h('div', { class:'docg' });
-  DOCS.forEach(function(d){ g.appendChild(h('div', { class:'docw' }, [h('button', { class:'docb', onclick:function(){ docSink = null; makeDoc(d[0], o); } }, [ic('pdf'), h('div', {}, [h('b', { text:d[1] }), h('small', { text:d[2] })])]), h('button', { class:'docc', title:'Отправить в кабинет клиента' + (SIGN_KINDS.indexOf(d[0]) > -1 ? ' на подпись' : ''), onclick:function(){ docToCab(d[0], o); } }, [ic('sign'), h('span', { text:'В кабинет' })])])); });
+  var DGR = [['До начала работ', ['contract', 'smeta', 'graph', 'measure', 'pd', 'keys']], ['Во время ремонта', ['hidden', 'stage', 'extra', 'receipt']], ['Сдача объекта', ['final', 'guarantee', 'sverka']], ['Если что-то пошло не так', ['cancel']]], dk = {};
+  DOCS.forEach(function(d){ dk[d[0]] = d; });
+  DGR.forEach(function(gr){ var list = gr[1].map(function(k){ var d = dk[k]; delete dk[k]; return d; }).filter(Boolean); if (gr === DGR[DGR.length - 1]) Object.keys(dk).forEach(function(k){ list.push(dk[k]); }); if (!list.length) return; g.appendChild(h('div', { class:'docgh', text:gr[0] }));
+  list.forEach(function(d){ g.appendChild(h('div', { class:'docw' }, [h('button', { class:'docb', onclick:function(){ docSink = null; makeDoc(d[0], o); } }, [ic('pdf'), h('div', {}, [h('b', { text:d[1] }), h('small', { text:d[2] })])]), h('button', { class:'docc', title:'Отправить в кабинет клиента' + (SIGN_KINDS.indexOf(d[0]) > -1 ? ' на подпись' : ''), onclick:function(){ docToCab(d[0], o); } }, [ic('sign'), h('span', { text:'В кабинет' })])])); }); });
   w.appendChild(card('Документы по объекту', [g, h('small', { class:'muted', text:'Шаблоны — типовые. Перед первым использованием покажите договор юристу и поправьте под себя.' })]));
 }
 function pick(titleText, fields, onOk){ var box = dlg(titleText, fields.concat([h('div', { class:'row' }, [h('span', { class:'sp' }), btn('pdf', 'Сформировать', '', function(){ box.remove(); onOk(); })])])); }
@@ -2356,6 +2359,41 @@ var vObjZ = V.obj;
 V.obj = function(w, a){ vObjZ(w, a); var o = byId(S.objs, String(a || '').split('|')[0]); if (!o) return; var head = w.querySelector('.card'); if (!head || head.querySelector('.tabs')) return;
   var d = h('details', { class:'card ohead' }), sm = h('summary', {}, [h('b', { text:client(o.cid).name || 'Клиент не указан' }), h('span', { class:'pill ' + (o.status === 'В работе' ? 'g' : o.status === 'Черновик' ? '' : 'y'), text:o.status }), h('span', { text:[o.prorab ? 'прораб ' + crewName(o.prorab) : '', o.end ? 'сдача ' + fdate(o.end) : ''].filter(Boolean).join(' · ') }), ic('chev')]), inner = h('div', { class:'oin' });
   while (head.firstChild) inner.appendChild(head.firstChild); d.appendChild(sm); d.appendChild(inner); if (window.innerWidth > 860 && !uiGet().ohead) d.open = true; d.ontoggle = function(){ if (window.innerWidth > 860) uiSet('ohead', d.open ? 0 : 1); }; head.replaceWith(d); };
+
+/* ================= ТЕЛЕФОН: таблицы карточками, подписи к ячейкам ================= */
+var MOB = { q:0 };
+function mobTables(root){
+  $$('table.t', root || document).forEach(function(t){
+    if (t.classList.contains('perm') || t.classList.contains('nocard')) return;
+    var ths = $$('thead th', t).map(function(th){ return (th.textContent || '').trim(); });
+    if (ths.length < 4){ t.classList.remove('mcard'); return; }
+    t.classList.add('mcard');
+    $$('tbody tr', t).forEach(function(tr){ var i = 0;
+      Array.prototype.forEach.call(tr.children, function(td){ var l = ths[i] || ''; i += td.colSpan || 1;
+        if (td.getAttribute('data-l') !== l) td.setAttribute('data-l', l);
+        var only = td.children.length === 1 && td.firstElementChild;
+        td.classList.toggle('m-x', !l && !!only && only.tagName === 'BUTTON' && only.classList.contains('x'));
+        td.classList.toggle('m-e', !l && !td.textContent.trim() && !td.querySelector('input,select,button,a'));
+      }); });
+  });
+}
+function mobRun(){ MOB.q = 0; var v = $('#view'); if (v) mobTables(v); var p = $('.peek'); if (p) mobTables(p); }
+(function(){
+  var obs = new MutationObserver(function(){ if (MOB.q) return; MOB.q = 1; (window.requestAnimationFrame || setTimeout)(mobRun); });
+  function start(){ obs.observe(document.body, { childList:true, subtree:true }); mobRun(); }
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+})();
+/* Заявки на телефоне: показатели одной строкой, фильтры под кнопкой — сразу видно сами заявки */
+var vCrmM = V.crm;
+V.crm = function(w, a){ vCrmM(w, a);
+  var g = w.querySelector('.grid4'); if (g) g.classList.add('kpim');
+  var bar = w.querySelector('.crmbar'); if (!bar) return;
+  var sels = $$('select', bar).filter(function(s){ return !s.classList.contains('pipe'); }); if (!sels.length) return;
+  var n = sels.filter(function(s){ return s.selectedIndex > 0; }).length;
+  bar.classList.add('mfil'); if (n || uiGet().crmFo) bar.classList.add('fo');
+  var b = h('button', { class:'btn lt xs ftog' + (n ? ' on' : ''), onclick:function(){ var o = !bar.classList.contains('fo'); bar.classList.toggle('fo', o); uiSet('crmFo', o ? 1 : 0); } }, [ic('gear'), 'Фильтры' + (n ? ' · ' + n : '')]);
+  var q = bar.querySelector('input[type=search]'); if (q && q.nextSibling) bar.insertBefore(b, q.nextSibling); else bar.appendChild(b);
+};
 
 /* ================= запуск ================= */
 renderNav();

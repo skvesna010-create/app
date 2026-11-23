@@ -513,3 +513,55 @@ html.navmini .ucard{justify-content:center;padding:6px;background:none}html.navm
 
 /* панель заявки: этапы переносятся, полные названия */
 .stbar.sm{flex-wrap:wrap;overflow:visible;gap:4px}.stbar.sm button{flex:1 1 calc(33% - 4px);min-width:0;clip-path:none!important;border-radius:5px;font-size:12px;padding:7px 6px;white-space:nowrap}.stbar.sm button span{overflow:visible}.peek .ph small{display:block;white-space:normal}
+
+/* ===== телефон для прорабов: без тесноты ===== */
+@media (max-width:640px){
+  html,body{overflow-x:hidden}
+  /* таблицы — карточками */
+  .tw:has(table.mcard){border:0;overflow:visible;border-radius:0}
+  table.mcard,table.mcard tbody,table.mcard tr,table.mcard td{display:block;width:100%}
+  table.mcard thead{display:none}
+  table.mcard tr{position:relative;background:var(--card,#fff);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+  table.mcard tr.late{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+  table.mcard td{display:flex;align-items:center;justify-content:space-between;gap:12px;border:0!important;padding:5px 0!important;text-align:right;min-height:0}
+  table.mcard td::before{content:attr(data-l);flex:none;max-width:46%;text-align:left;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  table.mcard td:first-child{font-weight:700;font-size:15px;text-align:left;padding-right:34px!important}
+  table.mcard td:first-child::before,table.mcard td[data-l=""]::before{display:none}
+  table.mcard td[data-l=""]{justify-content:flex-end}
+  table.mcard td.m-e{display:none}
+  table.mcard td.m-x{position:absolute;top:6px;right:6px;width:auto;padding:0!important}
+  table.mcard td input:not([type=checkbox]),table.mcard td select{max-width:60%;text-align:right}
+  table.mcard td:first-child>*{flex:1 1 auto;min-width:0}table.mcard td:first-child input:not([type=checkbox]){max-width:none;width:100%;text-align:left;font-weight:700}
+  table.mcard td input[type=checkbox]{width:22px;height:22px}
+  table.mcard td.n{font-variant-numeric:tabular-nums}
+  /* шапка объекта: имя и статус в строку, прораб ниже */
+  .ohead>summary{flex-wrap:wrap;row-gap:4px;padding:12px 14px}
+  .ohead>summary b{order:0}.ohead>summary .pill{order:1}.ohead>summary .ic{order:2}
+  .ohead>summary>span:not(.pill){order:3;flex-basis:100%;font-size:12.5px}
+  .ohead>.oin{padding:0 14px 14px}
+  /* размеры комнаты — в одну строку */
+  .dims{flex-wrap:nowrap;gap:6px}.dims>.ic{display:none}.dims .x{padding-bottom:12px}
+  .dims .f{flex:1 1 0;width:auto!important;min-width:0}.dims .f .fl{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* подсказка под полем не налезает на следующее поле */
+  .f>small{display:block;margin-bottom:6px;font-weight:500}
+  /* кнопки в шапке — одной строкой с прокруткой, главная первой */
+  .bar-r{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:0 1 auto;min-width:0;max-width:100%}.bar-r::-webkit-scrollbar{display:none}
+  .bar-r>*{flex:none;white-space:nowrap}.bar-r .btn:not(.lt):not(.gh){order:-1}
+  /* этапы CRM: название во всю ширину, тип и срок ниже */
+  .strow{grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) 28px;row-gap:6px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .strow>:nth-child(2){grid-column:2/4;grid-row:1}
+  .strow>:nth-child(3){grid-column:2;grid-row:2}
+  .strow>:nth-child(4){grid-column:3;grid-row:2}
+  .strow>:last-child{grid-column:4;grid-row:1}
+  .strow>:nth-child(4) input{width:56px}
+}
+.dupb{display:inline-block;background:var(--rl);color:var(--red);font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 6px;margin-left:6px;cursor:help}
+.docgh{grid-column:1/-1;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 -2px}.docgh:first-child{margin-top:0}
+.crmbar .ftog{display:none}
+@media (max-width:640px){
+  .wrap>.grid4.kpim{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -12px 10px;padding:0 12px}.grid4.kpim::-webkit-scrollbar{display:none}
+  .grid4.kpim>*{flex:0 0 auto;min-width:118px;margin:0;padding:10px 12px}.grid4.kpim .kv,.grid4.kpim b:first-child{font-size:20px}.grid4.kpim small,.grid4.kpim span{font-size:11.5px}
+  .crmbar.mfil .ftog{display:inline-flex;flex:none}.crmbar.mfil .ftog.on{box-shadow:inset 0 0 0 1.5px var(--g2);color:var(--g2)}
+  .crmbar.mfil input[type=search]{min-width:0;flex:1 1 140px}
+  .crmbar.mfil:not(.fo)>select:not(.pipe){display:none}
+}
