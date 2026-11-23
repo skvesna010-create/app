@@ -635,3 +635,34 @@ html.navmini .ucard{justify-content:center;padding:6px;background:none}html.navm
 @media (max-width:640px){.room .rh{flex-wrap:wrap;row-gap:4px}.room input.rn{flex:1 1 0;min-width:0;width:auto;font-size:17px}.room .rh>.sp{display:none}.room .rsw{order:5;flex-basis:100%;flex-direction:row;align-items:baseline;gap:8px;text-align:left;margin:0}.room .rs{font-size:18px}}
 @media (min-width:641px){.room .rh{flex-wrap:nowrap}.room input.rn{flex:0 1 auto;min-width:90px;width:auto}.sm-lay:not(.tbl) .room .rcnt{display:none}.room .rsw{flex:none}}
 @media (max-width:640px){.smbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -12px 12px;padding:0 12px}.smbar::-webkit-scrollbar{display:none}.smbar>*{flex:none;white-space:nowrap}}
+
+/* ===== смета «Таблица» в духе сметных программ: ровная таблица, цифры текстом, Р/М, подытоги ===== */
+.smsum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;margin-bottom:12px}
+.smsum>div{background:#fff;border:1px solid #D6DFDA;border-radius:10px;padding:16px 18px}
+.sms-t{display:flex;flex-direction:column;line-height:1.15;margin-bottom:8px}.sms-t span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.sms-t b{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.sms-i{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--muted);margin-bottom:14px}.sms-i b{color:var(--ink,#1E2A24)}
+table.smst{width:100%;border-collapse:collapse;font-size:13.5px;margin-bottom:6px}
+table.smst th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800;padding:0 0 8px;text-align:left}
+table.smst td{padding:7px 0;border-top:1px solid #EEF2EF}
+table.smst .n{text-align:right;font-variant-numeric:tabular-nums;padding-left:12px;white-space:nowrap}
+table.smst tr.tt td{font-weight:800;border-top:1.5px solid var(--ink,#1E2A24);font-size:14.5px}
+table.smst .pct{font-style:normal;background:var(--g2);color:#fff;border-radius:5px;padding:1px 6px;font-size:11.5px;margin-left:4px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle}.dot.r,.tyb.r{background:#2E9E6A}.dot.m,.tyb.m{background:#8B5CC7}
+@media (min-width:1000px){
+  .lns.tbl .tyb{flex:none;width:20px;height:20px;border-radius:4px;color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+  .lns.tbl .ln-top .lno{background:none;color:var(--muted);width:34px;justify-content:flex-start;font-size:12px;font-weight:700;border-radius:0}
+  .lns.tbl .ln.lnh .ln-top .lno{width:60px}
+  /* поля выглядят как текст, рамка — только при наведении и вводе */
+  .lns.tbl .ln input:not([type=checkbox]),.lns.tbl .ln select,.lns.tbl textarea.lname{border-color:transparent;background:transparent;box-shadow:none}
+  .lns.tbl .ln:hover input:not([type=checkbox]),.lns.tbl .ln:hover select,.lns.tbl .ln:hover textarea.lname{border-color:#DCE4DF;background:#fff}
+  .lns.tbl .ln input:focus,.lns.tbl .ln select:focus,.lns.tbl textarea.lname:focus{border-color:var(--g2)!important;background:#fff!important}
+  .lns.tbl .lf.q input,.lns.tbl .lf.p input{text-align:right}
+  .lns.tbl .qi.auto{color:#1F7A52;font-weight:700}
+  .lns.tbl .ab{opacity:.55}.lns.tbl .ln:hover .ab,.lns.tbl .ab:not(.on){opacity:1}
+  .lns.tbl .ln.mrow{padding:2px 8px;background:#FCFBFE!important;font-size:12.5px;color:#5B5470}
+  .lns.tbl .mrow .ln-top{padding-left:26px}.lns.tbl .mrow .mnm{padding-left:6px}
+  .lns.tbl .mrow .lf{display:block;text-align:right;font-variant-numeric:tabular-nums;padding-right:6px}.lns.tbl .mrow .lf.w,.lns.tbl .mrow .lf.z,.lns.tbl .mrow .lf.d{padding:0}
+  .lns.tbl .secr{display:flex;justify-content:space-between;font-weight:800;font-size:13px;color:var(--ink,#1E2A24);padding:8px 12px 8px 36px;background:#F3F6F4}
+  .lns.tbl .secr b{padding-right:290px;font-variant-numeric:tabular-nums}
+}
+@media (max-width:900px){.smsum{grid-template-columns:1fr}}
