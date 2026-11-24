@@ -5022,6 +5022,119 @@ OTF.smeta = function(w, o, totBox, refreshTot){
 };
 var goSm = go; go = function(v, a){ var r = goSm.apply(this, arguments); if (!$('.smbar')){ var b = $('#smbulk'); if (b) b.remove(); } return r; };
 
+/* ================= КОМАНДА как в Битрикс24: справочник сотрудников, структура, приглашение ================= */
+function deptName(id){ var d = byId(S.depts || [], id); return d ? d.name : ''; }
+function bossOf(c){ if (c.boss) return byId(S.crew, c.boss); var d = byId(S.depts || [], c.dept); return d && d.head && d.head !== c.id ? byId(S.crew, d.head) : null; }
+function accName(c){ if (!c.acc || !c.acc.role) return ''; var r = AROLES.filter(function(x){ return x[0] === c.acc.role; })[0]; return r ? r[1] : c.acc.role; }
+
+var vCrewTabs = V.crew;
+V.crew = function(w, a){ var tab = a || 'list';
+  if (tab !== 'list' && tab !== 'org') return vCrewTabs(w, a);
+  title('Сотрудники и структура'); S.depts = S.depts || [];
+  var canEdit = me().solo || me().role === 'owner' || me().role === 'admin' || can('crew');
+  if (canEdit){ $('#barR').appendChild(btn('plus', 'Отдел', 'lt', function(){ deptDlg({ parent:'' }); })); $('#barR').appendChild(btn('plus', 'Сотрудник', '', function(){ newPersonDlg(); })); }
+  w.appendChild(h('div', { class:'tabs' }, [['list', 'Сотрудники'], ['org', 'Структура компании'], ['pos', 'Должности']].map(function(t){ return h('button', { class:t[0] === tab ? 'on' : '', text:t[1], onclick:function(){ go('crew', t[0]); } }); })));
+  if (tab === 'org') return orgChart(w, canEdit);
+  var M = crewStats(), f = { q:'', d:'', st:'on' }, box = h('div');
+  var q = h('input', { type:'search', placeholder:'Поиск: имя, телефон, должность' }); q.oninput = function(){ f.q = q.value.trim().toLowerCase(); draw(); };
+  var ds = h('select', {}, [h('option', { value:'', text:'Все отделы' })].concat(S.depts.map(function(d){ return h('option', { value:d.id, text:d.name }); })).concat([h('option', { value:'-', text:'Без отдела' })])); ds.onchange = function(){ f.d = ds.value; draw(); };
+  var ss = h('select', {}, [h('option', { value:'on', text:'Работают' }), h('option', { value:'off', text:'Уволенные' }), h('option', { value:'all', text:'Все' })]); ss.onchange = function(){ f.st = ss.value; draw(); };
+  var act = S.crew.filter(function(c){ return !c.to; });
+  w.appendChild(h('div', { class:'grid4 kpim' }, [kpi(String(act.length), 'сотрудников'), kpi(String(S.depts.length), 'отделов'), kpi(String(act.filter(function(c){ return c.acc && c.acc.role; }).length), 'с доступом в приложение'), kpi(String(act.filter(function(c){ var m = M[c.id]; return m && Object.keys(m.objs).some(function(k){ return m.objs[k] && m.objs[k].status === 'В работе'; }); }).length), 'сейчас на объектах')]));
+  w.appendChild(card(null, [h('div', { class:'row tfil' }, [q, ds, ss]), box]));
+  function draw(){ box.innerHTML = '';
+    var L = S.crew.filter(function(c){ if (f.st === 'on' && c.to) return false; if (f.st === 'off' && !c.to) return false; if (f.d === '-' ? (c.dept && byId(S.depts, c.dept)) : (f.d && c.dept !== f.d)) return false; if (f.q && [c.name, c.phone, c.role, deptName(c.dept)].join(' ').toLowerCase().indexOf(f.q) < 0) return false; return true; });
+    if (!L.length){ box.appendChild(empty(S.crew.length ? 'Никого не нашлось.' : 'Добавьте первого сотрудника — кнопка «Сотрудник» вверху.')); return; }
+    var tb = h('table', { class:'t team' }), hr = ['Сотрудник', 'Отдел', 'Руководитель', 'Телефон', 'Объекты', can('cost') ? 'К выплате' : null, 'Доступ'].filter(Boolean);
+    tb.appendChild(h('thead', {}, [h('tr', {}, hr.map(function(x){ return h('th', { text:x }); }))]));
+    var bd = h('tbody'); L.forEach(function(c){ var m = M[c.id] || { objs:{}, all:0, allPaid:0 }, inWork = Object.keys(m.objs).map(function(k){ return m.objs[k]; }).filter(function(o){ return o && o.status === 'В работе'; }), boss = bossOf(c);
+      var tr = h('tr', { class:'clk' + (c.to ? ' off' : ''), onclick:function(e){ if (e.target.closest('a')) return; go('person', c.id); } }, [
+        h('td', {}, [h('div', { class:'who' }, [avatar(c), h('div', {}, [h('b', { text:c.name }), h('small', { text:c.role || '' })])])]),
+        h('td', { text:deptName(c.dept) || '—' }), h('td', { text:boss ? boss.name : '—' }),
+        h('td', {}, [c.phone ? h('a', { href:'tel:' + c.phone.replace(/[^\d+]/g, ''), text:c.phone }) : h('span', { class:'muted', text:'—' })]),
+        h('td', { text:inWork.length ? inWork.map(function(o){ return '№' + o.num; }).join(', ') : (c.to ? 'уволен' : 'свободен') }),
+        can('cost') ? h('td', { class:'n', text:rub(Math.max(0, m.all - m.allPaid)) }) : null,
+        h('td', {}, [c.acc && c.acc.role ? h('span', { class:'pill g', text:accName(c) }) : h('span', { class:'pill', text:'нет' })])]);
+      bd.appendChild(tr); });
+    tb.appendChild(bd); box.appendChild(h('div', { class:'tw' }, [tb])); }
+  draw();
+};
+
+/* структура компании деревом: компания → отделы → руководитель и люди */
+function orgChart(w, canEdit){ var people = S.crew.filter(function(c){ return !c.to; }), own = people.filter(function(c){ return c.acc && c.acc.role === 'owner'; })[0];
+  function pcard(c, head){ return h('button', { class:'oc-p' + (head ? ' head' : ''), onclick:function(){ go('person', c.id); } }, [avatar(c), h('span', {}, [h('b', { text:c.name }), h('small', { text:(head ? 'Руководитель · ' : '') + (c.role || '') })])]); }
+  function dnode(d){ var head = d.head && byId(S.crew, d.head), mem = people.filter(function(c){ return c.dept === d.id && c.id !== d.head; }), kids = S.depts.filter(function(x){ return x.parent === d.id; });
+    return h('li', {}, [h('div', { class:'oc-d' }, [h('div', { class:'oc-dh' }, [h('b', { text:d.name }), h('small', { text:(mem.length + (head ? 1 : 0)) + ' чел.' }), canEdit ? h('button', { class:'oc-e', title:'Изменить отдел', text:'Изменить', onclick:function(){ deptDlg(d); } }) : null]),
+      head ? pcard(head, 1) : h('div', { class:'oc-nohead', text:'Руководитель не назначен' }), mem.length ? h('div', { class:'oc-m' }, mem.map(function(c){ return pcard(c); })) : null,
+      canEdit ? h('div', { class:'oc-act' }, [h('button', { text:'+ сотрудник', onclick:function(){ newPersonDlg({ dept:d.id }); } }), h('button', { text:'+ подотдел', onclick:function(){ deptDlg({ parent:d.id }); } })]) : null]),
+      kids.length ? h('ul', {}, kids.map(dnode)) : null]); }
+  var roots = S.depts.filter(function(d){ return !d.parent || !byId(S.depts, d.parent); }), loose = people.filter(function(c){ return !c.dept || !byId(S.depts, c.dept); }).filter(function(c){ return c !== own; });
+  var tree = h('div', { class:'oc' }, [h('ul', {}, [h('li', {}, [h('div', { class:'oc-d oc-root' }, [h('div', { class:'oc-dh' }, [h('b', { text:S.co.name || 'Компания' })]), own ? pcard(own, 1) : null]),
+    roots.length ? h('ul', {}, roots.map(dnode)) : null])])]);
+  w.appendChild(card(null, [h('div', { class:'hint b', html:'Структура как в Битрикс24: отделы, их руководители и люди. Нажмите на человека — откроется его карточка. Руководитель отдела по умолчанию — непосредственный начальник всех в отделе.' }), roots.length ? h('div', { class:'oc-wrap' }, [tree]) : empty('Отделов пока нет. Нажмите «Отдел» вверху: например, «Продажи», «Производство», «Бригада Рустама».')]));
+  if (loose.length) w.appendChild(card('Без отдела · ' + loose.length, [h('div', { class:'oc-m' }, loose.map(function(c){ return pcard(c); })), canEdit ? h('small', { class:'muted', text:'Откройте карточку и выберите отдел — человек появится в структуре.' }) : null]));
+}
+
+/* новый сотрудник: один понятный шаг вместо пустой карточки */
+function newPersonDlg(pre){ pre = pre || {}; var c = { id:uid(), name:'', role:(pre.role || 'Мастер-универсал'), phone:'', dept:pre.dept || '', brig:'', note:'', from:today() }, acc = { r:'' }, out = h('div');
+  var depS = sel(c, 'dept', [['', 'Без отдела']].concat((S.depts || []).map(function(d){ return [d.id, d.name]; })));
+  var roles = AROLES.filter(function(r){ return r[0] !== 'owner' && (me().role === 'owner' || r[0] !== 'admin'); });
+  var box = dlg('Новый сотрудник', [h('div', { class:'grid2' }, [field('ФИО', inp(c, 'name', 'text', null, { placeholder:'Иванов Иван' })), field('Телефон', inp(c, 'phone', 'tel', null, { placeholder:'+7 …' }))]),
+    h('div', { class:'grid2' }, [field('Должность', sel(c, 'role', ROLES)), field('Отдел', depS)]),
+    field('Доступ в приложение', sel(acc, 'r', [['', 'Пока без доступа — только в списке и сметах']].concat(roles.map(function(r){ return [r[0], r[1]]; })))),
+    h('small', { class:'muted', text:'Схему оплаты, дату рождения, MAX и остальное заполните потом в карточке сотрудника.' }), out,
+    h('div', { class:'row' }, [h('span', { class:'sp' }), btn('', 'Отмена', 'lt', function(){ box.remove(); }), btn('check', 'Добавить', '', function(){
+      if (!c.name.trim()) return toast('Впишите имя');
+      S.crew.push(c); if (acc.r) c.acc = { role:acc.r }; save(); logA('Добавлен сотрудник: ' + c.name);
+      if (acc.r && SRV.on()) SRV.req('POST', '/invites', { crew_id:c.id, name:c.name, role:acc.r }).then(function(j){ var k = ''; try { var sk = JSON.parse(localStorage.getItem('dprokey') || 'null'); if (sk) k = '&k=' + encodeURIComponent(sk.k); } catch(e){}
+          var u = location.origin + location.pathname.replace(/[^\/]*$/, '') + '#join:' + j.token + k + (SRV.url() !== API_DEF ? '&s=' + encodeURIComponent(SRV.url()) : ''), txt = 'Здравствуйте, ' + c.name.split(' ')[0] + '! Вас пригласили в приложение ' + (S.co.name || '') + '. Откройте ссылку, придумайте логин и пароль: ' + u;
+          box.innerHTML = ''; box.appendChild(h('div', { class:'dlg-b' }, [h('h3', { text:'Сотрудник добавлен' }), h('div', { class:'hint g', text:'Отправьте ему приглашение — по ссылке он сам придумает логин и пароль и сразу попадёт в компанию. Ссылка действует 7 дней.' }), h('textarea', { rows:'4', readonly:true, text:txt }),
+            h('div', { class:'row' }, [btn('', 'Скопировать', '', function(){ try { navigator.clipboard.writeText(txt); } catch(e){} toast('Скопировано'); }), c.phone ? h('a', { class:'btn lt', href:'sms:' + c.phone.replace(/[^\d+]/g, '') + '?body=' + encodeURIComponent(txt), text:'SMS' }) : null, h('span', { class:'sp' }), btn('', 'Открыть карточку', 'lt', function(){ box.remove(); go('person', c.id); })])])); })
+        .catch(function(e){ toast('Сотрудник добавлен, но приглашение не создалось: ' + e.message); box.remove(); go('person', c.id); });
+      else { box.remove(); go('person', c.id); } })])]);
+}
+
+/* карточка сотрудника: без дубля «Отдел» текстом, со схемой оплаты прямо здесь */
+var vPersonT = V.person;
+V.person = function(w, id){ vPersonT(w, id); var c = byId(S.crew, id); if (!c) return;
+  var sub = $('.pers .grow > .muted', w); if (sub) sub.textContent = [c.role, deptName(c.dept), c.brig].filter(Boolean).join(' · ');
+  var bs = $$('select', w).filter(function(x){ return x.options[0] && x.options[0].value === '' && /Не указан/.test(x.options[0].text); })[0], dh = !c.boss && bossOf(c); if (bs && dh) bs.options[0].text = 'Руководитель отдела — ' + dh.name;
+  $$('.field, .f', w).forEach(function(f){ var s = f.querySelector('span'); if (s && /^Отдел$/.test(s.textContent.trim()) && f.querySelector('input[type=text]')) f.remove(); });
+  if (can('salary') || me().solo){ var pc = card('Схема оплаты', [payFields(c, function(){ save(); }), h('div', { class:'row' }, [btn('coin', 'Расчёт и выплаты', 'lt xs', function(){ go('emp', c.id); })])]); var cs = $$('.card', w); (cs[2] || cs[cs.length - 1]).after(pc); }
+};
+
+/* ================= ОБЪЕКТЫ: ход работ, оплаты и сроки сразу в списке ================= */
+V.objs = function(w){
+  title('Объекты и сметы'); $('#barR').appendChild(btn('plus', 'Новая смета', '', function(){ newObj(); }));
+  var f = { st:uiGet().objSt || 'Активные', q:'', who:'' }, box = h('div');
+  var ACT = function(o){ return ['Утверждена', 'В работе'].indexOf(o.status) > -1; };
+  var groups = [['Активные', ACT], ['Все', function(){ return true; }]].concat(OST.map(function(s){ return [s, function(o){ return o.status === s; }]; }));
+  var seg = h('div', { class:'seg' }); groups.forEach(function(g){ var n = S.objs.filter(g[1]).length; if (!n && g[0] !== 'Активные' && g[0] !== 'Все') return; seg.appendChild(h('button', { class:g[0] === f.st ? 'on' : '', text:g[0] + ' ' + n, onclick:function(e){ $$('button', seg).forEach(function(b){ b.classList.remove('on'); }); e.target.classList.add('on'); f.st = g[0]; uiSet('objSt', g[0]); draw(); } })); });
+  var q = h('input', { type:'search', placeholder:'Адрес, клиент, номер' }); q.oninput = function(){ f.q = q.value.trim().toLowerCase(); draw(); };
+  var pr = h('select', {}, [h('option', { value:'', text:'Все прорабы' })].concat(S.crew.filter(function(c){ return !c.to && S.objs.some(function(o){ return o.prorab === c.id; }); }).map(function(c){ return h('option', { value:c.id, text:c.name }); }))); pr.onchange = function(){ f.who = pr.value; draw(); };
+  w.appendChild(h('div', { class:'row tfil' }, [seg, h('span', { class:'sp' }), q, pr]));
+  function prog(o){ var n = 0, d = 0; (o.rooms || []).forEach(function(r){ r.lines.forEach(function(l){ n++; if (l.done) d++; }); }); return n ? Math.round(d / n * 100) : 0; }
+  function bar(p, cls){ return h('div', { class:'pbar ' + (cls || '') }, [h('i', { style:'width:' + Math.max(0, Math.min(100, p)) + '%' })]); }
+  function draw(){ box.innerHTML = ''; var G = groups.filter(function(g){ return g[0] === f.st; })[0] || groups[1];
+    var L = S.objs.filter(G[1]).filter(function(o){ if (f.who && o.prorab !== f.who) return false; if (f.q && [o.num, o.name, client(o.cid).name, client(o.cid).phone].join(' ').toLowerCase().indexOf(f.q) < 0) return false; return true; }).sort(function(a, b){ return (b.num || 0) - (a.num || 0); });
+    if (!L.length){ box.appendChild(empty(S.objs.length ? 'В этом разделе пусто.' : 'Здесь пока пусто. Нажмите «Новая смета».')); return; }
+    var cost = can('cost'), tb = h('table', { class:'t objt' }), hd = ['№', 'Объект', 'Прораб', 'Сроки', 'Ход работ', 'Сумма', 'Оплачено', cost ? 'Прибыль' : null].filter(Boolean);
+    tb.appendChild(h('thead', {}, [h('tr', {}, hd.map(function(x, i){ return h('th', { class:i >= 5 ? 'n' : '', text:x }); }))]));
+    var bd = h('tbody'), now = today();
+    L.forEach(function(o){ var C = objCalc(o), p = prog(o), paid = C.total ? Math.round(C.inc / C.total * 100) : 0, late = o.end && o.end < now && ['Сдан', 'Отказ'].indexOf(o.status) < 0, pro = o.prorab && byId(S.crew, o.prorab), cl = client(o.cid);
+      bd.appendChild(h('tr', { class:'clk' + (late ? ' late' : ''), onclick:function(){ go('obj', o.id); } }, [
+        h('td', { class:'n', text:String(o.num || '') }),
+        h('td', {}, [h('b', { text:o.name || 'Без адреса' }), h('small', { class:'d', text:cl.name || '' }), h('span', { class:'st st' + OST.indexOf(o.status), text:o.status })]),
+        h('td', { text:pro ? pro.name : '—' }),
+        h('td', {}, [o.start || o.end ? h('span', { text:(o.start ? fdate(o.start).slice(0, 5) : '…') + ' — ' + (o.end ? fdate(o.end).slice(0, 5) : '…') }) : h('span', { class:'muted', text:'не заданы' }), late ? h('small', { class:'d r', text:'просрочен' }) : null]),
+        h('td', {}, [h('div', { class:'pw' }, [bar(p, p >= 100 ? 'g' : ''), h('small', { text:p + '%' })])]),
+        h('td', { class:'n', text:rub(C.total) }),
+        h('td', { class:'n' }, [h('span', { text:rub(C.inc) }), h('div', { class:'pw' }, [bar(paid, 'b'), h('small', { text:paid + '%' })])]),
+        cost ? h('td', { class:'n' + (C.planProfit < 0 ? ' r' : ''), text:rub(C.planProfit) }) : null])); });
+    tb.appendChild(bd); box.appendChild(h('div', { class:'tw' }, [tb])); }
+  w.appendChild(card(null, [box])); draw();
+};
+
 /* ================= АККУРАТНЫЙ ИНТЕРФЕЙС: меню-папки, профиль внизу, нижняя панель на телефоне, порядок вкладок ================= */
 Object.assign(ICO, { chev:'<path d="M9 6l6 6-6 6"/>', folder:'<path d="M3 7h6l2 2h10v10H3z"/>', money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', team:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5M16 4.5a3 3 0 0 1 0 6M18 14.5c1.6.6 2.7 2.4 3 5.5"/>', dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>' });
 var NAV2 = [
