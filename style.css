@@ -738,3 +738,8 @@ table.t tr.clk{cursor:pointer}table.t tr.clk:hover td{background:#F6F9F7}table.t
 @media(max-width:700px){.mst{min-width:112px}.mpath .row small{display:none}}
 .dealtop>.stbar button{min-width:0;flex:1 1 0;white-space:normal;line-height:1.15;font-size:11.5px;padding:6px 6px 6px 12px;min-height:40px;display:flex;align-items:center;justify-content:center;text-align:center}
 @media(max-width:900px){.dealtop>.stbar button{flex:0 0 auto;min-width:96px}}
+/* порядок оплаты */
+.paysel{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}.paysel select{width:auto;min-width:240px;padding:6px 8px;font-size:13px}.payp{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}.payp input{padding:5px 6px;font-size:13px}
+.paynow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border-radius:6px;background:var(--bg)}.paynow>div{display:flex;flex-direction:column}.paynow.on{background:var(--yl)}.paynow small{font-size:12px}
+.psteps{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.pstep{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:5px;padding:4px 4px 4px 9px;background:#fff;font-size:12.5px}.pstep b{font-weight:600}.pstep .x{border:0;background:none;color:var(--muted);padding:0 5px;font-size:13px}.pstep .x:hover{color:var(--ink)}
+.card .psteps + .row select{width:auto;min-width:220px}
