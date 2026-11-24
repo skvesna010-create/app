@@ -698,3 +698,4 @@ table.smst .pct{font-style:normal;background:var(--g2);color:#fff;border-radius:
 #smbulk{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:8px;background:var(--ink,#1E2A24);color:#fff;border-radius:12px;padding:10px 12px 10px 16px;box-shadow:0 14px 36px rgba(0,0,0,.28);max-width:calc(100vw - 24px);overflow-x:auto}
 #smbulk b{white-space:nowrap;margin-right:4px}#smbulk select{height:32px;width:auto;font-size:13px}#smbulk .btn{flex:none}
 .card.room{overflow:visible}.room .rh{border-radius:9px 9px 0 0}.room.rfold .rh{border-radius:9px}.room .addz{border-radius:0 0 9px 9px}
+.steps-ol{margin:10px 0 6px 18px;padding:0;display:grid;gap:6px;font-size:13.5px}.steps-ol code{background:#EEF3F0;border-radius:4px;padding:1px 5px}
