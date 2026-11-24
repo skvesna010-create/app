@@ -2791,7 +2791,7 @@ V.home = function(w){
 
 /* ================= ЗАЯВКИ (CRM) ================= */
 var STAGES = ['Новая', 'На связи', 'Замер назначен', 'Замер проведён', 'Дизайн-проект', 'Смета отправлена', 'Согласование', 'Отложили', 'Подписание договора', 'Договор', 'Отказ'];
-var SRC = ['Сайт', 'Квиз на сайте', 'Яндекс Директ', 'Авито', 'VK', 'МАКС', 'Звонок', 'Брошюра', 'Рекомендация', 'Повторный', 'Другое'];
+var SRC = ['Сайт', 'Квиз на сайте', 'Яндекс Директ', 'Авито', 'VK', 'МАКС', 'Звонок', 'Брошюра', 'Листовка', 'Рекомендация', 'Повторный', 'Другое'];
 var LOST = ['Дорого', 'Выбрали других', 'Отложили ремонт', 'Не дозвонились', 'Не наш объект', 'Сделают сами', 'Тест / спам', 'Другое'];
 var TPL_DEF = {
   followups:'2|Отправить кейс похожей квартиры|{name}, добрый день! Посмотрите, как мы сделали похожую квартиру — пришлю фото и смету. Если удобно, покажу этот объект вживую.\n5|Пригласить на живой объект|{name}, у нас сейчас идёт ремонт рядом с вами. Можем показать объект в процессе — так лучше всего видно качество. Когда вам удобно?\n10|Напомнить о сроке расчёта|{name}, напоминаю: расчёт по вашей квартире действует до {until}. Дальше цены на материалы могут измениться. Записать вас на бесплатный замер?',
@@ -5168,7 +5168,7 @@ function flowMig(c){ if (c.fv >= 1){ if (c.fv < 2){ c.paths = c.paths || JSON.pa
   (S.objs || []).forEach(function(o){ if (o.status === 'Сдан' && !o.srvAt) o.srvAt = 'old'; });
   if (c.lost.indexOf('Отложили ремонт') > -1) c.lost.splice(c.lost.indexOf('Отложили ремонт'), 1);
   c.paths = c.paths || JSON.parse(JSON.stringify(PATHS0)); c.fv = 2; STAGES = main ? main.stages.map(function(s){ return s.n; }) : STAGES; }
-crmCfg = (function(f){ return function(){ var c = f(); flowMig(c); if (!c.srcBr){ c.srcBr = 1; if (c.src.indexOf('Брошюра') < 0) c.src.splice(Math.max(0, c.src.indexOf('Рекомендация')), 0, 'Брошюра'); } return c; }; })(crmCfg);
+crmCfg = (function(f){ return function(){ var c = f(); flowMig(c); if (!c.srcBr){ c.srcBr = 1; if (c.src.indexOf('Брошюра') < 0) c.src.splice(Math.max(0, c.src.indexOf('Рекомендация')), 0, 'Брошюра'); } if (!c.srcLs){ c.srcLs = 1; if (c.src.indexOf('Листовка') < 0) c.src.splice(Math.max(0, c.src.indexOf('Брошюра') + 1), 0, 'Листовка'); } return c; }; })(crmCfg);
 
 /* смена этапа ⇄ вехи */
 function msMark(d, k, on){ d.ms = d.ms || {}; if (on === false){ delete d.ms[k]; logD(d, 'Снята отметка: ' + msL(d, k)); return; } if (d.ms[k]) return; d.ms[k] = today(); logD(d, 'Выполнено: ' + msL(d, k)); }
