@@ -2608,7 +2608,7 @@ function fresh(){
 }
 var S; try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){}
 if (!S || !S.cat) S = fresh();
-(function(){ (S.deals || []).forEach(function(d){ if (d.stage === 'Смета') d.stage = 'КП отправлено'; d.tasks = d.tasks || []; }); (S.objs || []).forEach(function(o){ if (o.status === 'Смета') o.status = 'Черновик'; if (o.status === 'Договор') o.status = 'Утверждена'; }); })();
+(function(){ (S.deals || []).forEach(function(d){ if (d.stage === 'Смета') d.stage = 'Смета отправлена'; d.tasks = d.tasks || []; }); (S.objs || []).forEach(function(o){ if (o.status === 'Смета') o.status = 'Черновик'; if (o.status === 'Договор') o.status = 'Утверждена'; }); })();
 (function(){ if (S.mig2) return; var G = { 'Укладка плитки на пол':'floor', 'Укладка плитки на стены':'wall', 'Гидроизоляция пола':'floor', 'Затирка швов':'', 'Тёплый пол (электрический)':'' }; S.cat.works.forEach(function(w){ if (G[w.name] && !w.geo) w.geo = G[w.name]; }); S.mig2 = 1; })();
 var saveT = null;
 function save(){ clearTimeout(saveT); saveT = setTimeout(function(){ try { localStorage.setItem(KEY, JSON.stringify(S)); var sv = $('#saved'); if (sv) sv.textContent = 'Сохранено · ' + new Date().toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' }); } catch(e){ toast('Мало места в браузере: удалите фото или сделайте копию и очистите старые объекты'); } }, 250);  if (typeof cabAuto === "function") cabAuto(); }
@@ -2790,7 +2790,7 @@ V.home = function(w){
 };
 
 /* ================= ЗАЯВКИ (CRM) ================= */
-var STAGES = ['Новая', 'На связи', 'Замер', 'КП отправлено', 'Думает', 'Договор', 'Отказ'];
+var STAGES = ['Новая', 'На связи', 'Замер назначен', 'Замер проведён', 'Дизайн-проект', 'Смета отправлена', 'Согласование', 'Отложили', 'Подписание договора', 'Договор', 'Отказ'];
 var SRC = ['Сайт', 'Квиз на сайте', 'Яндекс Директ', 'Авито', 'VK', 'МАКС', 'Звонок', 'Рекомендация', 'Повторный', 'Другое'];
 var LOST = ['Дорого', 'Выбрали других', 'Отложили ремонт', 'Не дозвонились', 'Не наш объект', 'Сделают сами', 'Тест / спам', 'Другое'];
 var TPL_DEF = {
@@ -2834,8 +2834,8 @@ function newClient(name, phone){ var c = { id:uid(), name:name || 'Новый к
 function newDeal(){ var c = newClient(); var mg = S.crew.filter(function(x){ return x.role === 'Менеджер' && !x.to; })[0]; var d = { id:uid(), cid:c.id, stage:'Новая', src:'Сайт', camp:'', sum:'', what:'', area:'', next:today(), todo:'Перезвонить', notes:'', at:today(), ts:Date.now(), mgr:mg ? mg.id : '', maxSt:0, tasks:[] }; S.deals.unshift(d); logA('Новая заявка'); save(); go('deal', d.id); }
 function schedFollow(d){ d.tasks = d.tasks || []; if (d.tasks.some(function(t){ return t.auto && !t.done; })) return; lines3('followups').forEach(function(p){ if (!+p[0]) return; d.tasks.push({ id:uid(), due:new Date(Date.now() + (+p[0]) * 864e5).toISOString().slice(0, 10), title:p[1], text:p[2] || '', auto:true, done:false }); }); }
 function setStage(d, st, reason){
-  if (d.stage === st) return; var old = d.stage; d.stage = st; if (old === 'Новая' && !d.firstAt) d.firstAt = Date.now(); d.maxSt = Math.max(d.maxSt || 0, STAGES.indexOf(st) < 6 ? STAGES.indexOf(st) : 0);
-  if (st === 'КП отправлено'){ d.kpAt = d.kpAt || today(); schedFollow(d); }
+  if (d.stage === st) return; var old = d.stage; d.stage = st; if (old === 'Новая' && !d.firstAt) d.firstAt = Date.now(); d.maxSt = Math.max(d.maxSt || 0, (st === 'Отложили' || st === 'Договор' || st === 'Отказ') ? 0 : STAGES.indexOf(st));
+  if (st === 'Смета отправлена'){ d.kpAt = d.kpAt || today(); schedFollow(d); }
   if (st === 'Договор' || st === 'Отказ') (d.tasks || []).forEach(function(t){ if (t.auto && !t.done){ t.done = true; t.doneAt = today(); t.closed = true; } });
   if (st === 'Отказ') d.lost = reason || d.lost || '';
   if (st === 'Договор' && d.oid){ var o = byId(S.objs, d.oid); if (o && isDraft(o)){ o.status = 'Утверждена'; o.approved = o.approved || { at:today(), by:'договор подписан', total:Math.round(objCalc(o).total) }; if (!o.contractAt) o.contractAt = today(); } }
@@ -2864,7 +2864,7 @@ V.crm = function(w){
     board.appendChild(col);
   });
   w.appendChild(board);
-  w.appendChild(h('p', { class:'muted sm', text:'Перетаскивайте карточки между колонками. В «КП отправлено» программа сама ставит дожим на 2-й, 5-й и 10-й день. Красные — ждут ответа больше 15 минут.' }));
+  w.appendChild(h('p', { class:'muted sm', text:'Перетаскивайте карточки между колонками. В «Смета отправлена» программа сама ставит дожим на 2-й, 5-й и 10-й день. Красные — ждут ответа больше 15 минут.' }));
 };
 V.deal = function(w, id){
   var d = byId(S.deals, id); if (!d){ go('crm'); return; } var c = client(d.cid); d.tasks = d.tasks || [];
@@ -2888,7 +2888,7 @@ V.deal = function(w, id){
     tb.appendChild(h('div', { class:'task' + (t.done ? ' done' : late ? ' p1' : now2 ? ' p2' : '') }, [h('span', { class:'tn', text:t.done ? '✓' : late ? '!' : '•' }), h('div', {}, [h('b', { text:t.title }), h('small', { text:fdate(t.due) + (t.auto ? ' · дожим' : '') + (t.closed ? ' · закрыта автоматически' : '') }), txt ? h('small', { class:'pre', text:txt }) : null]),
       !t.done && txt ? btn('', 'Отправить', 'xs', function(){ sendWA(d, txt); t.done = true; t.doneAt = today(); save(); go('deal', d.id); }) : null, !t.done && txt ? btn('copy', '', 'lt xs', function(){ copy(txt, 'текст'); }) : null,
       h('button', { class:'btn lt xs', text:t.done ? '↺' : 'Готово', onclick:function(){ t.done = !t.done; t.doneAt = t.done ? today() : ''; save(); go('deal', d.id); } }), h('button', { class:'x', text:'×', onclick:function(){ d.tasks.splice(d.tasks.indexOf(t), 1); save(); go('deal', d.id); } })])); });
-  if (!d.tasks.length) tb.appendChild(empty('Задач нет. Когда переведёте заявку в «КП отправлено», дожим поставится сам.'));
+  if (!d.tasks.length) tb.appendChild(empty('Задач нет. Когда переведёте заявку в «Смета отправлена», дожим поставится сам.'));
   var nt = { t:'', due:today() };
   main.appendChild(card(h('h3', {}, ['Задачи и дожим', h('span', { class:'sp' }), d.stage !== 'Договор' && d.stage !== 'Отказ' ? btn('', 'Поставить дожим', 'lt xs', function(){ schedFollow(d); save(); go('deal', d.id); }) : null]), [tb, h('div', { class:'row' }, [inp(nt, 't', 'text', null, { placeholder:'Новая задача…' }), inp(nt, 'due', 'date'), btn('plus', 'Добавить', 'lt', function(){ if (!nt.t) return; d.tasks.push({ id:uid(), title:nt.t, due:nt.due, text:'', auto:false, done:false }); save(); go('deal', d.id); })])]));
   /* быстрые ответы */
@@ -3284,7 +3284,7 @@ function approvalCard(o){
   return card('Утверждение сметы', [box]);
 }
 function linkBox(o, u){ var c = client(o.cid); return h('div', { class:'linkbox' }, [h('input', { type:'text', value:u, readonly:true }), btn('copy', 'Скопировать', '', function(){ copy(u, 'ссылка'); }), h('a', { class:'btn lt', href:u, target:'_blank', rel:'noopener', text:'Открыть' }), btn('', 'Отправить в ' + chName(chOf(c)), 'lt', function(){ sendMsg(c, 'Здравствуйте! Ваш личный кабинет в ' + S.co.name + ' — тут смета, этапы и оплаты, всё обновляется само: ' + u); })]); }
-function sentLink(o, u){ o.lastLink = u; if (o.status === 'Черновик') o.status = 'Отправлена'; S.deals.forEach(function(dd){ if (dd.oid === o.id && ['Новая', 'На связи', 'Замер'].indexOf(dd.stage) > -1) setStage(dd, 'КП отправлено'); }); save(); }
+function sentLink(o, u){ o.lastLink = u; if (o.status === 'Черновик') o.status = 'Отправлена'; S.deals.forEach(function(dd){ if (dd.oid === o.id && ['Новая', 'На связи', 'Замер', 'Замер назначен', 'Замер проведён', 'Дизайн-проект'].indexOf(dd.stage) > -1) setStage(dd, 'Смета отправлена'); }); save(); }
 function tabClient(w, o){
   w.appendChild(approvalCard(o));
   var c = client(o.cid);
@@ -4228,7 +4228,7 @@ function demoSeed(){
   var W = function(re){ return S.cat.works.filter(function(x){ return re.test(x.name); })[0]; }, L = function(re, done){ var x = W(re); if (!x) return null; var l = lineFrom(x); l.done = !!done; return l; };
   var crew = [{ id:uid(), name:'Ольга Смирнова', role:'Менеджер', phone:'+7 900 100-00-01', about:'5 лет веду ремонты под ключ. На связи с 9 до 21.', from:today(), demo:1 }, { id:uid(), name:'Сергей Иванов', role:'Прораб', phone:'+7 900 100-00-02', about:'Прораб с 12-летним стажем, сам принимаю каждый этап.', from:today(), demo:1 }, { id:uid(), name:'Бригада Рустама', role:'Мастер-универсал', phone:'+7 900 100-00-03', from:today(), demo:1 }];
   crew.forEach(function(c){ S.crew.push(c); });
-  var names = [['Ирина Ковалёва', 'ул. Малышева, 51', 'Новая', 'Директ', 'капитальный', 54], ['Алексей Петров', 'ЖК Clever, 2-к', 'Замер', 'Авито', 'новостройка', 61], ['Марина Сергеева', 'ул. Ленина, 24', 'КП отправлено', 'Сайт', 'ванная', 6], ['Дмитрий Орлов', 'пр. Космонавтов, 18', 'Думает', 'ВК', 'капитальный', 78], ['Наталья Белова', 'ул. Репина, 105', 'Договор', 'Рекомендация', 'капитальный', 47]];
+  var names = [['Ирина Ковалёва', 'ул. Малышева, 51', 'Новая', 'Директ', 'капитальный', 54], ['Алексей Петров', 'ЖК Clever, 2-к', 'Замер', 'Авито', 'новостройка', 61], ['Марина Сергеева', 'ул. Ленина, 24', 'Смета отправлена', 'Сайт', 'ванная', 6], ['Дмитрий Орлов', 'пр. Космонавтов, 18', 'Думает', 'ВК', 'капитальный', 78], ['Наталья Белова', 'ул. Репина, 105', 'Договор', 'Рекомендация', 'капитальный', 47]];
   names.forEach(function(n, i){ var c = { id:uid(), name:n[0], phone:'+7 912 000-0' + (10 + i), addr:n[1], ch:'max', demo:1 }; S.clients.push(c);
     var d = { id:uid(), cid:c.id, stage:n[2], src:n[3], camp:'', sum:'', what:n[4], area:n[5], next:today(), todo:'Перезвонить', notes:'', at:new Date(Date.now() - i * 864e5).toISOString().slice(0, 10), ts:Date.now() - (i * 864e5 + 7 * 60000), mgr:crew[0].id, maxSt:0, tasks:[], demo:1 };
     if (i === 1) d.measure = new Date(Date.now() + 864e5).toISOString().slice(0, 10) + 'T11:00';
@@ -4691,13 +4691,13 @@ V.crmset = function(w, a){ var cfg = crmCfg(), tab = a || 'pipes'; title('Нас
   w.appendChild(h('div', { class:'tabs' }, [['pipes', 'Воронки и этапы'], ['auto', 'Автоматизация'], ['fields', 'Поля и теги'], ['lists', 'Источники и отказы'], ['rr', 'Распределение'], ['plan', 'План продаж'], ['web', 'Заявки с сайтов']].concat(me().role === 'owner' ? [['dellog', 'Журнал удалений']] : []).map(function(t){ return h('button', { class:t[0] === tab ? 'on' : '', text:t[1], onclick:function(){ go('crmset', t[0]); } }); })));
   if (tab === 'pipes'){ cfg.pipes.forEach(function(p){ var box = h('div');
       p.stages.forEach(function(s, i){ var col = h('input', { type:'color', value:s.c, class:'clr' }); col.oninput = function(){ s.c = col.value; save(); };
-        box.appendChild(h('div', { class:'strow' }, [col, inp(s, 'n', 'text', null, { disabled:p.id === 'main' && (s.n === 'Новая' || s.n === 'Договор' || s.n === 'Отказ' || s.n === 'КП отправлено') }), (function(){ var k = sel(s, 'k', [['', 'В работе'], ['won', 'Успех (договор)'], ['lost', 'Отказ']]); return k; })(), h('label', { class:'rotin', title:'Сколько дней заявка может быть на этапе, потом подсветится' }, [inp(s, 'rot', 'number', null, { placeholder:'—', min:'0' }), 'дн.']), h('span', { class:'muted sm', text:(S.deals.filter(function(d){ return (d.pipe || 'main') === p.id && d.stage === s.n; }).length) + ' заявок' }),
+        box.appendChild(h('div', { class:'strow' }, [col, inp(s, 'n', 'text', null, { disabled:p.id === 'main' && (s.n === 'Новая' || s.n === 'Договор' || s.n === 'Отказ' || s.n === 'Смета отправлена') }), (function(){ var k = sel(s, 'k', [['', 'В работе'], ['won', 'Успех (договор)'], ['lost', 'Отказ']]); return k; })(), h('label', { class:'rotin', title:'Сколько дней заявка может быть на этапе, потом подсветится' }, [inp(s, 'rot', 'number', null, { placeholder:'—', min:'0' }), 'дн.']), h('span', { class:'muted sm', text:(S.deals.filter(function(d){ return (d.pipe || 'main') === p.id && d.stage === s.n; }).length) + ' заявок' }),
           btn('', '↑', 'lt xs', function(){ if (i){ p.stages.splice(i - 1, 0, p.stages.splice(i, 1)[0]); save(); go('crmset'); } }), h('button', { class:'x', text:'×', onclick:function(){ if (S.deals.some(function(d){ return (d.pipe || 'main') === p.id && d.stage === s.n; })) return toast('На этапе есть заявки — сначала перенесите их'); if (p.id === 'main' && STAGES.indexOf(s.n) > -1 && ['Новая', 'Договор', 'Отказ'].indexOf(s.n) > -1) return toast('Этот этап обязательный'); p.stages.splice(i, 1); save(); go('crmset'); } })])); });
       w.appendChild(card(h('div', { class:'row' }, [h('input', { type:'text', value:p.name, class:'pipename', oninput:function(e){ p.name = e.target.value; save(); } }), h('span', { class:'sp' }), cfg.pipes.length > 1 && p.id !== 'main' ? h('button', { class:'btn red xs', text:'Удалить воронку', onclick:function(){ if (S.deals.some(function(d){ return d.pipe === p.id; })) return toast('В воронке есть заявки'); cfg.pipes.splice(cfg.pipes.indexOf(p), 1); save(); go('crmset'); } }) : null]), [box, btn('plus', 'Этап', 'lt xs', function(){ var n = prompt('Название этапа'); if (!n) return; var at = p.stages.findIndex ? p.stages.findIndex(function(s){ return s.k; }) : -1; p.stages.splice(at > -1 ? at : p.stages.length, 0, { n:n.trim(), c:STC[p.stages.length % STC.length], k:'', rules:[] }); if (p.id === 'main') STAGES = p.stages.map(function(s){ return s.n; }); save(); go('crmset'); })])); });
-    w.appendChild(h('div', { class:'row' }, [btn('plus', 'Новая воронка', '', function(){ var n = prompt('Название воронки, например «Строительство домов»'); if (!n) return; cfg.pipes.push({ id:uid(), name:n.trim(), stages:[{ n:'Новая заявка', c:STC[0], k:'', rules:[{ act:'task', text:'Связаться с клиентом', days:0 }] }, { n:'Переговоры', c:STC[1], k:'', rules:[] }, { n:'Смета', c:STC[3], k:'', rules:[] }, { n:'Договор', c:STC[5], k:'won', rules:[] }, { n:'Отказ', c:STC[6], k:'lost', rules:[] }] }); save(); go('crmset'); }), h('small', { class:'muted', text:'Например: «Ремонт квартир», «Строительство домов», «Коммерческие объекты». В основной воронке этапы «Новая», «КП отправлено», «Договор», «Отказ» служебные — их нельзя переименовать.' })])); }
+    w.appendChild(h('div', { class:'row' }, [btn('plus', 'Новая воронка', '', function(){ var n = prompt('Название воронки, например «Строительство домов»'); if (!n) return; cfg.pipes.push({ id:uid(), name:n.trim(), stages:[{ n:'Новая заявка', c:STC[0], k:'', rules:[{ act:'task', text:'Связаться с клиентом', days:0 }] }, { n:'Переговоры', c:STC[1], k:'', rules:[] }, { n:'Смета', c:STC[3], k:'', rules:[] }, { n:'Договор', c:STC[5], k:'won', rules:[] }, { n:'Отказ', c:STC[6], k:'lost', rules:[] }] }); save(); go('crmset'); }), h('small', { class:'muted', text:'Например: «Ремонт квартир», «Строительство домов», «Коммерческие объекты». В основной воронке этапы «Новая», «Смета отправлена», «Договор», «Отказ» служебные — их нельзя переименовать.' })])); }
   if (tab === 'auto'){ w.appendChild(h('div', { class:'hint b', text:'Когда заявка попадает на этап, программа сама ставит задачу ответственному, назначает ответственного, добавляет тег или предлагает отправить клиенту сообщение по шаблону. В шаблоне можно использовать {name}, {manager}, {company}, {link}, {phone}.' }));
     cfg.pipes.forEach(function(p){ w.appendChild(card(p.name, p.stages.map(function(s){ s.rules = s.rules || []; return h('div', { class:'arow' }, [h('div', { class:'arh' }, [h('span', { class:'stg', style:'--c:' + s.c, text:s.n }), h('span', { class:'sp' }), btn('zap', 'Добавить действие', 'lt xs', function(){ ruleDlg(s); })]),
-      s.rules.length ? h('div', {}, s.rules.map(function(r, i){ return h('div', { class:'rule' }, [ic(r.act === 'task' ? 'cal' : r.act === 'msg' ? 'chat' : r.act === 'tag' ? 'tag' : 'user'), h('span', { text:r.act === 'task' ? 'Задача «' + r.text + '» через ' + (+r.days || 0) + ' дн.' : r.act === 'msg' ? 'Сообщение клиенту: ' + r.text.slice(0, 70) + (r.text.length > 70 ? '…' : '') : r.act === 'tag' ? 'Тег «' + r.text + '»' : 'Ответственный: ' + crewName(r.who) }), h('span', { class:'sp' }), h('button', { class:'x', text:'×', onclick:function(){ s.rules.splice(i, 1); save(); go('crmset', 'auto'); } })]); })) : h('small', { class:'muted', text:s.n === 'КП отправлено' ? 'Встроено: дожим на 2-й, 5-й и 10-й день (тексты в «Компания → Для клиентов»).' : 'Нет действий' })]); }))); });
+      s.rules.length ? h('div', {}, s.rules.map(function(r, i){ return h('div', { class:'rule' }, [ic(r.act === 'task' ? 'cal' : r.act === 'msg' ? 'chat' : r.act === 'tag' ? 'tag' : 'user'), h('span', { text:r.act === 'task' ? 'Задача «' + r.text + '» через ' + (+r.days || 0) + ' дн.' : r.act === 'msg' ? 'Сообщение клиенту: ' + r.text.slice(0, 70) + (r.text.length > 70 ? '…' : '') : r.act === 'tag' ? 'Тег «' + r.text + '»' : 'Ответственный: ' + crewName(r.who) }), h('span', { class:'sp' }), h('button', { class:'x', text:'×', onclick:function(){ s.rules.splice(i, 1); save(); go('crmset', 'auto'); } })]); })) : h('small', { class:'muted', text:s.n === 'Смета отправлена' ? 'Встроено: дожим на 2-й, 5-й и 10-й день (тексты в «Компания → Для клиентов»).' : 'Нет действий' })]); }))); });
     w.appendChild(card('Правило «Следующий шаг»', [h('label', { class:'chk' }, [(function(){ var x = h('input', { type:'checkbox' }); x.checked = cfg.needNext; x.onchange = function(){ cfg.needNext = x.checked; save(); }; return x; })(), 'Подсвечивать заявки без запланированной задачи — ни одна заявка не теряется'])])); }
   if (tab === 'fields'){ var tt = h('textarea', { rows:'4' }); tt.value = cfg.tags.join('\n'); tt.onchange = function(){ cfg.tags = tt.value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean); save(); };
     w.appendChild(card('Теги', [h('small', { class:'muted', text:'По одному в строке. Теги видны на карточках и в фильтрах.' }), tt]));
@@ -4830,7 +4830,7 @@ function convCard(w){ var box = card('Директ учится на замер�
   SRV.req('GET', '/conv/link').then(function(j){ var body = box.querySelector('.cb') || box; $$('.muted', box).forEach(function(x){ x.remove(); });
     var inp = h('input', { type:'text', readonly:true, value:j.url, style:'font-family:monospace;font-size:12.5px' }); inp.onclick = function(){ inp.select(); };
     var add = function(el){ (box.querySelector('.cb') || box).appendChild(el); };
-    add(h('div', { class:'hint b', html:'Сейчас Директ видит только «заявку». По этой ссылке он каждый день получает, <b>кто из заявок дошёл до замера и кто подписал договор</b> — и начинает искать таких же людей. Заявка в этапе «Замер», «КП отправлено», «Думает» = <b>замер</b>; этап типа «успех» (Договор) = <b>договор</b> с суммой; «Отказ» = отказ.' }));
+    add(h('div', { class:'hint b', html:'Сейчас Директ видит только «заявку». По этой ссылке он каждый день получает, <b>кто из заявок дошёл до замера и кто подписал договор</b> — и начинает искать таких же людей. Заявка в этапе «Замер», «Смета отправлена», «Думает» = <b>замер</b>; этап типа «успех» (Договор) = <b>договор</b> с суммой; «Отказ» = отказ.' }));
     add(h('div', { class:'row' }, [inp, btn('', 'Скопировать', 'lt', function(){ inp.select(); try { navigator.clipboard.writeText(j.url); } catch(e){ document.execCommand('copy'); } toast('Ссылка скопирована'); })]));
     add(h('ol', { class:'steps-ol' }, [
       h('li', { html:'Метрика → счётчик сайта → <b>Цели</b> → «Добавить цель» → <b>JavaScript-событие</b>, идентификатор <code>zamer</code>, название «Замер (CRM)».' }),
@@ -5134,6 +5134,82 @@ V.objs = function(w){
     tb.appendChild(bd); box.appendChild(h('div', { class:'tw' }, [tb])); }
   w.appendChild(card(null, [box])); draw();
 };
+
+/* ================= Путь клиента в ремонте: подробная воронка, сценарии и вехи в любом порядке, «Отложили» с датой возврата, сервис и повторные продажи после сдачи ================= */
+var FLOW = [
+  ['Новая', '#8B95A1', '', 10, 1, 'Связаться с клиентом', 0],
+  ['На связи', '#2F80ED', '', 15, 3, '', 0],
+  ['Замер назначен', '#9B51E0', '', 25, 7, 'Напомнить клиенту о замере и провести его', 1],
+  ['Замер проведён', '#7B61FF', '', 35, 3, 'Подготовить и отправить смету', 2],
+  ['Дизайн-проект', '#56CCF2', '', 40, 30, 'Согласовать этапы и оплату дизайн-проекта', 1],
+  ['Смета отправлена', '#F2994A', '', 50, 5, '', 0],
+  ['Согласование', '#F2C94C', '', 60, 7, 'Обсудить правки сметы и решение клиента', 3],
+  ['Отложили', '#A0A7B1', '', 30, 0, '', 0],
+  ['Подписание договора', '#27AE60', '', 85, 3, 'Подписать договор и получить аванс', 1],
+  ['Договор', '#00A86B', 'won', 100, 0, '', 0],
+  ['Отказ', '#E5534B', 'lost', 0, 0, '', 0]];
+var FLOW_OLD = { 'Замер':'Замер назначен', 'КП отправлено':'Смета отправлена', 'Думает':'Согласование', 'Смета':'Смета отправлена' };
+var SRVST = [['После сдачи', '#2F80ED', ''], ['Гарантийное обращение', '#F2994A', ''], ['Выезд назначен', '#9B51E0', ''], ['Устраняем', '#F2C94C', ''], ['Повторный интерес', '#56CCF2', ''], ['Закрыто', '#00A86B', 'won'], ['Не гарантийный случай', '#E5534B', 'lost']];
+/* вехи: можно отмечать в любом порядке — у каждого клиента свой путь */
+var MS = { zamer:'Замер', design:'Дизайн-проект', dpay:'Оплата дизайна', smeta:'Смета отправлена', ok:'Смета согласована', dog:'Договор подписан', avans:'Аванс получен' };
+var PATHS = [['r', 'Ремонт под ключ', ['zamer', 'smeta', 'ok', 'dog', 'avans']], ['dr', 'Дизайн-проект + ремонт', ['zamer', 'design', 'dpay', 'smeta', 'ok', 'dog', 'avans']], ['d', 'Только дизайн-проект', ['zamer', 'dpay', 'design', 'dog']], ['p', 'Частичный ремонт (ванная, кухня)', ['zamer', 'smeta', 'ok', 'dog', 'avans']], ['c', 'Смета по проекту клиента', ['smeta', 'zamer', 'ok', 'dog', 'avans']]];
+var MS_ST = { zamer:'Замер проведён', design:'Дизайн-проект', smeta:'Смета отправлена', ok:'Подписание договора', dog:'Договор' }, ST_MS = { 'Замер проведён':'zamer', 'Смета отправлена':'smeta', 'Подписание договора':'ok', 'Договор':'dog' };
+function pathOf(d){ if (!d.path) d.path = /дизайн/i.test(d.what || '') ? 'dr' : /ванн|санузел|туалет|кухн/i.test(d.what || '') ? 'p' : 'r'; return PATHS.filter(function(p){ return p[0] === d.path; })[0] || PATHS[0]; }
+function flowStage(x){ return { n:x[0], c:x[1], k:x[2], p:x[3], rot:x[4] || '', rules:x[5] ? [{ act:'task', text:x[5], days:x[6] }] : [] }; }
+function flowMig(c){ if (c.fv >= 1) return; var main = c.pipes.filter(function(p){ return p.id === 'main'; })[0];
+  if (main){ var old = {}; main.stages.forEach(function(s){ old[FLOW_OLD[s.n] || s.n] = s; });
+    var known = FLOW.map(function(x){ return x[0]; }), extra = main.stages.filter(function(s){ return known.indexOf(FLOW_OLD[s.n] || s.n) < 0; });
+    main.stages = FLOW.map(function(x){ var n = flowStage(x), o = old[x[0]]; if (o && o.rules && o.rules.length && !/Провести замер и подготовить смету|Узнать решение клиента/.test(o.rules.map(function(r){ return r.text; }).join())) n.rules = o.rules; if (o && o.rot) n.rot = o.rot; return n; });
+    var at = known.indexOf('Подписание договора'); extra.forEach(function(s, i){ main.stages.splice(at + i, 0, s); });
+    (S.deals || []).forEach(function(d){ if ((d.pipe || 'main') === 'main' && FLOW_OLD[d.stage]) d.stage = FLOW_OLD[d.stage]; if (d.maxSt) d.maxSt = 0; }); }
+  if (!c.pipes.some(function(p){ return p.id === 'srv'; })) c.pipes.push({ id:'srv', name:'Сервис и повторные продажи', stages:SRVST.map(function(x, i){ return { n:x[0], c:x[1], k:x[2], rules:i === 1 ? [{ act:'task', text:'Связаться и выяснить суть обращения', days:0 }] : i === 2 ? [{ act:'task', text:'Провести гарантийный выезд', days:2 }] : [] }; }) });
+  (S.objs || []).forEach(function(o){ if (o.status === 'Сдан' && !o.srvAt) o.srvAt = 'old'; });
+  if (c.lost.indexOf('Отложили ремонт') > -1) c.lost.splice(c.lost.indexOf('Отложили ремонт'), 1);
+  c.fv = 1; STAGES = main ? main.stages.map(function(s){ return s.n; }) : STAGES; }
+crmCfg = (function(f){ return function(){ var c = f(); flowMig(c); return c; }; })(crmCfg);
+
+/* смена этапа ⇄ вехи */
+function msMark(d, k, on){ d.ms = d.ms || {}; if (on === false){ delete d.ms[k]; logD(d, 'Снята отметка: ' + MS[k]); return; } if (d.ms[k]) return; d.ms[k] = today(); logD(d, 'Выполнено: ' + MS[k]); }
+setStage = (function(f){ return function(d, st, reason){ var old = d.stage; f(d, st, reason); if (old === d.stage || (d.pipe || 'main') !== 'main') return; var k = ST_MS[st]; if (k && !(d.ms || {})[k]){ msMark(d, k); if (k === 'dog'){ msMark(d, 'ok'); } save(); } if (st !== 'Отложили') delete d.back; }; })(setStage);
+function msClick(d, k){ var on = !(d.ms || {})[k]; msMark(d, k, on);
+  if (on && MS_ST[k] && (d.pipe || 'main') === 'main' && stOf(d).k !== 'won'){ var N = pipeOf(d).stages.map(function(s){ return s.n; }), cur = N.indexOf(d.stage), to = N.indexOf(MS_ST[k]); if (d.stage === 'Отложили' || stOf(d).k === 'lost' || to > cur) setStage(d, MS_ST[k]); }
+  save(); }
+function msNext(d){ var P = pathOf(d); return P[2].filter(function(k){ return !(d.ms || {})[k]; })[0]; }
+
+/* «Отложили»: клиент готов, но вернётся позже — дата возврата и напоминание */
+var BACK_WHY = ['Ждёт ключи / сдачу дома', 'Копит деньги / ждёт ипотеку', 'Ждёт дизайн-проект', 'Уехал, вернётся позже', 'Хочет начать в другой сезон', 'Другое'];
+function postponeDlg(d, after){ var f = { why:BACK_WHY[0], at:'' }, ds = h('input', { type:'date' }), presets = [[14, 'через 2 недели'], [30, 'через месяц'], [90, 'через 3 месяца'], [180, 'через полгода']];
+  var pr = h('div', { class:'chs' }), go2 = function(days){ f.at = new Date(Date.now() + days * 864e5).toISOString().slice(0, 10); ds.value = f.at; $$('.chs .chip', pr).forEach(function(x){ x.classList.remove('on'); }); };
+  presets.forEach(function(p){ var b = h('button', { class:'chip sm', text:p[1], onclick:function(){ go2(p[0]); b.classList.add('on'); } }); pr.appendChild(b); });
+  ds.onchange = function(){ f.at = ds.value; };
+  var box = dlg('Клиент вернётся позже', [h('p', { class:'muted', text:'Это не отказ: заявка останется в работе, а в нужный день программа напомнит связаться с клиентом.' }), fieldD('Почему откладывает', sel(f, 'why', BACK_WHY.map(function(x){ return [x, x]; }))), fieldD('Когда связаться', h('div', { class:'col' }, [pr, ds])),
+    h('div', { class:'row' }, [h('span', { class:'sp' }), btn('check', 'Отложить', '', function(){ if (!f.at) return toast('Выберите, когда связаться'); box.remove(); setStage(d, 'Отложили', f.why); d.back = f.at; d.backWhy = f.why; (d.tasks || (d.tasks = [])).forEach(function(t){ if (!t.done && t.rule){ t.done = true; t.closed = true; } }); d.tasks.push({ id:uid(), due:f.at, title:'Клиент обещал вернуться — связаться', text:f.why, done:false, rule:1 }); logD(d, 'Отложили до ' + fdate(f.at) + ': ' + f.why); save(); if (after) after(); })])]); }
+askStage = (function(f){ return function(d, st, after){ if ((d.pipe || 'main') === 'main' && st === 'Отложили') return postponeDlg(d, after);
+  if ((d.pipe || 'main') === 'main' && st === 'Отказ'){ var box = dlg('Почему отказ?', [h('div', { class:'col' }, [h('button', { class:'pk', onclick:function(){ box.remove(); postponeDlg(d, after); } }, [h('b', { text:'Отложили ремонт' }), h('small', { class:'muted', text:'Это не отказ — переведём в «Отложили» и напомним в нужный день' })])].concat(crmCfg().lost.map(function(r){ return h('button', { class:'pk', onclick:function(){ var rr = r === 'Другое' ? prompt('Причина', '') : r; if (rr === null) return; box.remove(); setStage(d, 'Отказ', rr); after(); } }, [h('b', { text:r })]); })))]); return; }
+  return f(d, st, after); }; })(askStage);
+
+/* карточка заявки: сценарий и вехи */
+V.deal = (function(f){ return function(w, id){ f(w, id); var d = byId(S.deals, id); if (!d || (d.pipe || 'main') !== 'main') return; var P = pathOf(d), top = w.querySelector('.dealtop'); if (!top) return;
+  var ps = h('select', { class:'pathsel' }); PATHS.forEach(function(p){ ps.appendChild(h('option', { value:p[0], text:p[1] })); }); ps.value = P[0]; ps.onchange = function(){ d.path = ps.value; logD(d, 'Сценарий: ' + pathOf(d)[1]); save(); go('deal', d.id); };
+  var nx = msNext(d), steps = h('div', { class:'msteps' }, P[2].map(function(k, i){ var dn = (d.ms || {})[k]; return h('button', { class:'mst' + (dn ? ' dn' : '') + (k === nx ? ' nx' : ''), title:dn ? 'Выполнено ' + fdate(dn) + '. Нажмите, чтобы снять отметку' : 'Отметить выполненным', onclick:function(){ msClick(d, k); go('deal', d.id); } }, [h('span', { class:'mi', text:dn ? '✓' : String(i + 1) }), h('span', { class:'mt' }, [h('b', { text:MS[k] }), h('small', { text:dn ? fdate(dn) : k === nx ? 'следующий шаг' : '' })])]); }));
+  var box = h('div', { class:'mpath' }, [h('div', { class:'row' }, [h('b', { text:'Путь клиента' }), ps, h('span', { class:'sp' }), h('small', { class:'muted', text:'Отмечайте шаги в любом порядке — этап воронки сдвинется сам' })]), steps]);
+  if (d.stage === 'Отложили' && d.back) box.appendChild(h('div', { class:'hint ' + (d.back <= today() ? 'r' : 'y') }, [h('b', { text:(d.back <= today() ? 'Пора связаться: ' : 'Вернётся ') + fdate(d.back) + '. ' }), d.backWhy || '', ' ', btn('', 'Перенести дату', 'lt xs', function(){ postponeDlg(d, function(){ go('deal', d.id); }); })]));
+  top.insertBefore(box, top.children[1] || null); }; })(V.deal);
+
+/* канбан: сценарий, прогресс и дата возврата на карточке */
+V.crm = (function(f){ return function(w, a){ f(w, a); $$('.kd[data-id]', w).forEach(function(el){ var d = byId(S.deals, el.getAttribute('data-id')); if (!d || (d.pipe || 'main') !== 'main') return; var P = pathOf(d), n = P[2].filter(function(k){ return (d.ms || {})[k]; }).length, nx = msNext(d);
+    var row = h('div', { class:'kms' }, [h('span', { class:'kpb', title:P[1] }, P[2].map(function(k){ return h('i', { class:(d.ms || {})[k] ? 'on' : '' }); })), h('small', { class:'muted', text:stOf(d).k ? P[1] : nx ? 'далее: ' + MS[nx].toLowerCase() : 'все шаги пройдены' })]);
+    if (d.stage === 'Отложили' && d.back) row.appendChild(h('span', { class:'nx' + (d.back <= today() ? ' late' : ''), text:'вернётся ' + fdate(d.back) }));
+    var kf = el.querySelector('.kf'); el.insertBefore(row, kf || null); }); }; })(V.crm);
+
+/* сдали объект → сервис и повторные продажи: отзыв, звонки через 3, 6, 12 месяцев */
+function srvCheck(){ var c = S.crm; if (!c || !c.fv) return; var pipe = (c.pipes || []).filter(function(p){ return p.id === 'srv'; })[0]; if (!pipe) return; var made = 0;
+  (S.objs || []).forEach(function(o){ if (o.status !== 'Сдан' || o.srvAt) return; o.srvAt = today(); var cl = client(o.cid), main = S.deals.filter(function(d){ return d.oid === o.id; })[0], dd = function(n){ return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); };
+    var d = { id:uid(), cid:o.cid, oid:o.id, pipe:'srv', stage:pipe.stages[0].n, src:'Повторный', camp:'', sum:'', what:'После сдачи: ' + o.name, area:'', next:dd(3), todo:'', notes:'', at:today(), ts:Date.now(), mgr:main ? main.mgr : '', maxSt:0, tags:[],
+      tasks:[[3, 'Попросить отзыв и рекомендацию друзьям'], [90, 'Сервисный звонок: всё ли в порядке с ремонтом'], [180, 'Полгода после ремонта: предложить новые работы'], [365, 'Год после ремонта: гарантийный осмотр и новые предложения']].map(function(x){ return { id:uid(), due:dd(x[0]), title:x[1], text:'', done:false, rule:1 }; }), hist:[{ at:new Date().toISOString(), t:'Объект №' + o.num + ' сдан — клиент перешёл на сопровождение' }] };
+    S.deals.unshift(d); made++; logA('Объект №' + o.num + ' сдан: ' + (cl.name || '') + ' — в «Сервис и повторные продажи»'); });
+  if (made) setTimeout(function(){ toast('Клиент перешёл в «Сервис и повторные продажи»: отзыв через 3 дня, звонки через 3, 6 и 12 месяцев'); save(); }, 50); }
+save = (function(f){ var busy = 0; return function(){ f.apply(this, arguments); if (busy) return; busy = 1; try { srvCheck(); } finally { busy = 0; } }; })(save);
 
 /* ================= АККУРАТНЫЙ ИНТЕРФЕЙС: меню-папки, профиль внизу, нижняя панель на телефоне, порядок вкладок ================= */
 Object.assign(ICO, { chev:'<path d="M9 6l6 6-6 6"/>', folder:'<path d="M3 7h6l2 2h10v10H3z"/>', money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', team:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5M16 4.5a3 3 0 0 1 0 6M18 14.5c1.6.6 2.7 2.4 3 5.5"/>', dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>' });

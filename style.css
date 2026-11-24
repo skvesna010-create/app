@@ -729,3 +729,12 @@ table.t tr.clk{cursor:pointer}table.t tr.clk:hover td{background:#F6F9F7}table.t
 .pw{display:flex;align-items:center;gap:6px;min-width:110px}.pw small{font-size:11.5px;color:var(--muted);min-width:30px;text-align:right}
 .pbar{flex:1;height:6px;border-radius:3px;background:#E8EEEA;overflow:hidden}.pbar i{display:block;height:100%;background:#F0B429;border-radius:3px}.pbar.g i{background:var(--g2)}.pbar.b i{background:#3B82C4}
 .objt td.n .pw{justify-content:flex-end;margin-top:3px}.objt td.r{color:var(--red)}
+/* путь клиента */
+.mpath{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}.mpath>.row{gap:10px;flex-wrap:wrap;align-items:center}.mpath .pathsel{width:auto;min-width:220px;padding:6px 8px;font-size:13px}
+.msteps{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}.mst{flex:1 1 0;min-width:120px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:8px 10px;text-align:left;color:var(--ink)}
+.mst:hover{border-color:var(--g)}.mst .mi{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid #C4CACC;display:grid;place-items:center;font:700 12px Inter,sans-serif;color:var(--muted)}.mst .mt{display:flex;flex-direction:column;min-width:0}.mst b{font-size:12.5px;line-height:1.25}.mst small{font-size:11px;color:var(--muted)}
+.mst.dn{background:var(--gl);border-color:#BFE8D8}.mst.dn .mi{background:var(--g);border-color:var(--g);color:#fff}.mst.nx{border-color:var(--g);box-shadow:inset 0 0 0 1px var(--g)}.mst.nx small{color:var(--g2);font-weight:600}
+.kms{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0}.kpb{display:inline-flex;gap:2px}.kpb i{width:12px;height:4px;border-radius:2px;background:#DDE1E0}.kpb i.on{background:var(--g)}.kms small{font-size:11px}
+@media(max-width:700px){.mst{min-width:112px}.mpath .row small{display:none}}
+.dealtop>.stbar button{min-width:0;flex:1 1 0;white-space:normal;line-height:1.15;font-size:11.5px;padding:6px 6px 6px 12px;min-height:40px;display:flex;align-items:center;justify-content:center;text-align:center}
+@media(max-width:900px){.dealtop>.stbar button{flex:0 0 auto;min-width:96px}}
