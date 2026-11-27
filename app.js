@@ -5897,6 +5897,7 @@ function fNewDlg(kind, preset){ if (!kind){ var bx = dlg('Что создать?
     if (kind === 'check'){ x.sum = +f.sum; x.cat = f.cat; x.pay = f.pay; x.cst = 'new'; x.title = f.cat + ' · ' + rub(+f.sum); }
     if (kind === 'report'){ x.people = f.people; x.hid = !!f.hid; x.title = (f.oid ? fObjName(f.oid) + ': ' : '') + 'отчёт за ' + fdate(today()); }
     if (kind === 'alert') x.title = (f.text || '').split('\n')[0].slice(0, 80);
+    if (typeof fHook === 'function') fHook(x, f);
     FEED().unshift(x); logA(FT[kind][0] + ': ' + (x.title || x.text).slice(0, 60)); save(); box.remove(); toast('Отправлено'); FF.tab = kind === 'report' ? 'report' : kind === 'check' ? 'check' : 'my'; go('feed'); })]));
   box = dlg(FT[kind][0] === 'Чек' ? 'Чек или расход' : kind === 'report' ? 'Отчёт с объекта' : FT[kind][0], F); box.classList.add('fdlg'); setTimeout(function(){ var q = $('.dlg input[type=text], .dlg textarea'); if (q && window.innerWidth > 700) q.focus(); }, 50); }
 /* ---------- карточка ---------- */
@@ -5945,6 +5946,126 @@ VPERM.feed = ''; VPERM.fitem = ''; NAVHL.fitem = 'feed';
 NAV2[0][2].splice(1, 0, ['feed', 'bolt', 'Лента команды']);
 navBadges = (function(f){ return function(){ f(); var n = fCount(); $$('#side [data-v="feed"], #mbar [data-v="feed"]').forEach(function(b){ var x = b.querySelector('.bdg'); if (x) x.remove(); if (n) b.appendChild(h('span', { class:'bdg', text:String(n) })); }); }; })(navBadges);
 go = (function(f){ return function(v){ var r = f.apply(this, arguments); try { navBadges(); } catch(e){} return r; }; })(go);
+
+/* ================= СТРУКТУРА КОМПАНИИ ПО ДОЛЖНОСТЯМ + РЕГЛАМЕНТ (повторяющиеся задачи) + ЧЕК-ЛИСТЫ ================= */
+var ORG_DUT = {"ROP_DEPT": ["Отвечает полностью за лидогенерацию."], "РОП": ["Постоянный контроль на соответствие цен в смете для заказчиков", "Обучает ПМ", "Обучает ОФ", "Еженедельный отчет для Директора"], "ОФ": ["Ведет папку клиента", "Осуществляет первое касание с лидом", "Передает лид ПМ", "Прозвон холодной базы", "Функции контроля качества (КК)", "Готовит месячный финансовый отчет для Д"], "ПМ": ["Второе касание с клиентом", "(договаривается о времени проведения замеров)", "Проводит замеры", "Составляет и согласовывает смету", "Подписывает договоры", "Передает заказ в отдел ведения проектов (ПО)", "Участвует в приёмке этапов вместе с РПО со стороны клиента"], "PO_DEPT": ["Отвечает за выполнение проектов-сроки, качества."], "РПО": ["Постоянный контроль на соответствие рыночных цен в смете", "Подбор специалистов (мастера,дизайнеры)", "Запуск работ на объекте", "Технический надзор", "Еженедельный отчет для Директора", "Составления и отправка заявок на материал в (ОС)", "Приёмка этапов работ по чек-листу и подписание актов сдачи", "Контроль запуска объекта в течение 2 суток после договора", "Контроль заявок прорабов на материал (2 раза в неделю)", "Ежедневный контроль объектов по видеонаблюдению"], "ДИ": ["Разрабатывает дизайн проект согласно ТЗ", "Опыт в  разработке:", "План монтажа-демонтажа перегородок", "Экспликация помещений", "Планы полов", "Планы теплых полов", "Планы потолков", "План электроосвещения", "План расположения выключателей", "План световых групп", "План расположения розеток", "План расположения отопительных приборов", "План расположения системы кондиционирования", "План раскладки плитки", "Развертки стен с раскладкой плитки", "План сантехнического оборудования", "План подвода воды", "Спецификация материалов."], "ПБ": ["Выполняет работы согласно проекту.", "Осуществляет руководство производственно-хозяйственной деятельностью объектов", "Обеспечивает выполнение производственных заданий по вводу объектов в эксплуатацию в установленные сроки и выполнению строительно-монтажных и пусконаладочных работ по всем количественным и качественным показателям с соблюдением проектов производства работ", "Организует производство строительно-монтажных работ в соответствии с проектной документацией, строительными нормами и правилами, техническими условиями и другими нормативными документами", "Ежедневный отчёт с объекта в «Ленте команды»", "Заявка на материал в отдел снабжения 2 раза в неделю", "Уведомление о скрытых работах до их закрытия"], "OS_DEPT": ["Постоянное снижение СС материалов", "Поиск ключевых партнеров", "Ключевая цель отдела: выход на собственные оптовые закупки материала"], "РОС": ["Еженедельный отчет для Директора", "Финансовый отчет о доходах от реализации материалов", "Поиск партнеров", "Подписание партнерских соглашений", "Ведение прайса материалов с ценами от наших партнеров"], "ПРОС": ["Заказ и поставка материала на объекты", "Финансовый отчет о закупках.", "Выполняет поручение РОС"]};
+/* должности: код, название, отдел, руководитель (код), обязанности */
+var ORG0 = [
+  ['Д', 'Директор', 'Руководство', '', ['Стратегия, финансы, контроль отделов', 'Утверждает маркетинговую стратегию, контент-план, акции', 'Принимает еженедельные отчёты руководителей отделов']],
+  ['АС', 'Ассистент', 'Руководство', 'Д', ['Сбор отчётов отделов (доходы, расходы), общий финансовый отчёт за месяц', 'Контроль соблюдения скриптов ОФ и ПМ, рейтинг специалистов', 'Отчёт общий: финансы, контроль качества, движение заявок']],
+  ['МПП', 'Менеджер по подбору партнёров', 'Руководство', 'Д', ['Поиск партнёров со смежной аудиторией', 'Договорённости о рекомендациях за % от сделки', 'Размещение рекламной продукции у партнёров']],
+  ['РОП', 'Руководитель отдела продаж', 'Отдел продаж', 'Д', null],
+  ['ОФ', 'Офис-менеджер', 'Отдел продаж', 'РОП', null],
+  ['ПМ', 'Проект-менеджер', 'Отдел продаж', 'РОП', null],
+  ['РПО', 'Руководитель проектного отдела (производство)', 'Проектный отдел', 'Д', null],
+  ['ДИ', 'Дизайнер интерьера', 'Проектный отдел', 'РПО', null],
+  ['ПБ', 'Прораб-бригада', 'Проектный отдел', 'РПО', null],
+  ['РОС', 'Руководитель отдела снабжения', 'Отдел снабжения', 'Д', null],
+  ['ПРОС', 'Помощник РОС', 'Отдел снабжения', 'РОС', null],
+  ['М', 'Маркетолог (руководитель отдела маркетинга)', 'Отдел маркетинга', 'Д', ['Маркетинговая стратегия на квартал', 'Акции, спецпредложения, предложения для отказников', 'Наполнение сайта, поиск мест размещения рекламы', 'Контроль СММ, контекстолога, дизайнера и видеографа']],
+  ['ГД', 'Графический и веб-дизайнер', 'Отдел маркетинга', 'М', ['Рекламная продукция по ТЗ: полиграфия, баннеры', 'Оформление сайта и соцсетей по брендбуку']],
+  ['ВО', 'Видеограф', 'Отдел маркетинга', 'М', ['Съёмка фото и видео на объектах по ТЗ', 'Монтаж видео']],
+  ['СММ', 'Специалист по соцсетям (таргет)', 'Отдел маркетинга', 'М', ['Ведение соцсетей по контент-плану', 'Контент-план раз в 2 недели', 'Таргетированная реклама, еженедельный отчёт и таблица конверсии']],
+  ['К', 'Контекстолог', 'Отдел маркетинга', 'М', ['Контекстная реклама на сайт (Яндекс Директ)', 'Еженедельный отчёт и таблица конверсии']]];
+function orgPos(){ if (!S.org || !S.org.pos) S.org = { pos:ORG0.map(function(p){ return { code:p[0], name:p[1], dept:p[2], parent:p[3], duties:p[4] || ORG_DUT[p[0]] || [] }; }), on:1 }; return S.org.pos; }
+function posBy(code){ return orgPos().filter(function(p){ return p.code === code; })[0]; }
+function holders(code){ return S.crew.filter(function(c){ return c.pos === code && !c.to; }); }
+/* руководитель по должности: ближайший занятый вышестоящий пост */
+function posBoss(code, selfId){ var p = posBy(code), g = 0; while (p && p.parent && g++ < 10){ var hs = holders(p.parent).filter(function(c){ return c.id !== selfId; }); if (hs.length) return hs[0].id; p = posBy(p.parent); } return ''; }
+/* записываем руководителя и отдел в карточку — по ним работают лента и права на сервере */
+function orgApply(){ if (!S.org) return; var deps = {}; S.depts = S.depts || [];
+  orgPos().forEach(function(p){ if (!p.dept || deps[p.dept]) return; var d = S.depts.filter(function(x){ return x.name === p.dept; })[0]; if (!d){ d = { id:uid(), name:p.dept, head:'', parent:'' }; S.depts.push(d); } deps[p.dept] = d; });
+  orgPos().forEach(function(p){ var d = deps[p.dept], pp = posBy(p.parent); if (!d || (pp && pp.dept === p.dept)) return; var h0 = holders(p.code)[0]; d.head = h0 ? h0.id : ''; });
+  S.crew.forEach(function(c){ if (!c.pos) return; var p = posBy(c.pos); if (!p) return; c.boss = posBoss(c.pos, c.id); if (deps[p.dept]) c.dept = deps[p.dept].id; c.posName = p.name; }); }
+/* ---------- регламент: повторяющиеся задачи по должностям ---------- */
+var REG0 = [
+  ['w-rop', 'Еженедельный отчёт директору: заявки, замеры, договоры, рейтинг ПМ', 'РОП', 'Д', 'w:1'],
+  ['w-rpo', 'Еженедельный отчёт директору: объекты, сроки, качество, просрочки', 'РПО', 'Д', 'w:1'],
+  ['w-ros', 'Еженедельный отчёт директору: закупки, экономия, партнёры', 'РОС', 'Д', 'w:1'],
+  ['w-m', 'Еженедельный отчёт директору: реклама, заявки по каналам, стоимость заявки', 'М', 'Д', 'w:1'],
+  ['zayavka', 'Заявка на материал в отдел снабжения по этапу работ', 'ПБ', 'РОС', 'w:2,5'],
+  ['video', 'Контроль объектов по видеонаблюдению: нарушения графика и технологии', 'РПО', 'Д', 'd'],
+  ['feedback', 'Прозвон заказчиков по скрипту: удовлетворённость работами', 'ОФ', 'РОП', 'w:5'],
+  ['otkaz', 'Прозвон отказников с индивидуальными предложениями', 'ОФ', 'РОП', 'w:3'],
+  ['training', 'Тренинг по продажам для ПМ и ОФ', 'РОП', 'Д', 'w:3'],
+  ['rating', 'Рейтинг ПМ и ОФ: скрипты, средний чек, конверсия замер → договор', 'АС', 'Д', 'w:5'],
+  ['target', 'Отчёт по таргету + таблица конверсии', 'СММ', 'М', 'w:1'],
+  ['context', 'Отчёт по контекстной рекламе + таблица конверсии', 'К', 'М', 'w:1'],
+  ['contentplan', 'Контент-план на 2 недели — согласовать с М, Д, РПО', 'СММ', 'Д', 'b:1'],
+  ['fin-dept', 'Расходы отдела: факт за месяц и план на следующий — передать АС', 'РОС', 'АС', 'm:28'],
+  ['fin-dept2', 'Расходы отдела: факт за месяц и план на следующий — передать АС', 'РПО', 'АС', 'm:28'],
+  ['fin-dept3', 'Расходы отдела: факт за месяц и план на следующий — передать АС', 'М', 'АС', 'm:28'],
+  ['fin', 'Финансовый отчёт за месяц: доходы, расходы по отделам, движение заявок', 'АС', 'Д', 'm:3'],
+  ['price', 'Обновить прайс материалов по ценам партнёров', 'РОС', 'Д', 'm:1'],
+  ['strategy', 'Маркетинговая стратегия на квартал — согласовать с директором', 'М', 'Д', 'q:5']];
+var FRQ = [['d', 'Каждый рабочий день'], ['w:1', 'По понедельникам'], ['w:2', 'По вторникам'], ['w:3', 'По средам'], ['w:4', 'По четвергам'], ['w:5', 'По пятницам'], ['w:2,5', 'Вторник и пятница'], ['w:1,4', 'Понедельник и четверг'], ['b:1', 'Раз в 2 недели, понедельник'], ['m:1', '1-го числа'], ['m:3', '3-го числа'], ['m:28', '28-го числа'], ['q:5', 'Раз в квартал, 5-го числа']];
+function regList(){ if (!S.org.reg) S.org.reg = REG0.map(function(r){ return { id:r[0], title:r[1], who:r[2], to:r[3], f:r[4], on:1 }; }); return S.org.reg; }
+function regDue(f, d){ var dt = new Date(d + 'T12:00:00'), wd = dt.getDay(), md = dt.getDate(), p = f.split(':'), v = (p[1] || '').split(',').map(Number);
+  if (p[0] === 'd') return wd > 0 && wd < 6;
+  if (p[0] === 'w') return v.indexOf(wd) > -1;
+  if (p[0] === 'b'){ var wk = Math.floor((dt.getTime() / 864e5 + 3) / 7); return wd === v[0] && wk % 2 === 0; }
+  if (p[0] === 'm') return md === v[0];
+  if (p[0] === 'q') return md === v[0] && [0, 3, 6, 9].indexOf(dt.getMonth()) > -1;
+  return false; }
+function regRun(){ if (!S.org || !S.org.on) return; var d = today(), made = 0; FEED();
+  regList().forEach(function(r){ if (!r.on || !regDue(r.f, d)) return; holders(r.who).forEach(function(c){ var id = 'rg-' + r.id + '-' + d + '-' + c.id; if (byId(S.feed, id)) return;
+    var ctl = holders(r.to)[0], x = { id:id, t:'task', at:new Date().toISOString(), by:ctl ? ctl.id : 'owner', to:[c.id], oid:'', title:r.title, text:'Задача по регламенту (' + ((FRQ.filter(function(q){ return q[0] === r.f; })[0] || [0, r.f])[1]).toLowerCase() + '). Отчитайтесь кнопкой «Сделано» — приложите отчёт, таблицу или фото.', media:[], urg:0, cm:[], seen:{}, due:d, st:'new', reg:r.id };
+    S.feed.unshift(x); made++; }); });
+  if (made) save(); }
+/* событие: договор подписан → запуск объекта и видеонаблюдение */
+setStage = (function(f){ return function(d, st){ var was = d.stage; f.apply(this, arguments); if (st !== 'Договор' || was === 'Договор' || !S.org || !S.org.on) return;
+  var o = d.oid && byId(S.objs, d.oid), pm = (o && o.manager) || d.mgr || (holders('ПМ')[0] || {}).id, rpo = (holders('РПО')[0] || {}).id, add = function(n){ var x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  if (!pm) return; FEED();
+  [['Установить видеонаблюдение на объекте', 1, 'Регламент: в течение 1 суток после подписания договора.'], ['Запуск работ на объекте: передать объект прорабу, верстак, чистота, наклейка на дверь, фото до начала', 2, 'Регламент: запуск в течение 2 суток. Отчитайтесь отчётом «Запуск объекта» с фото.']].forEach(function(t, i){ S.feed.unshift({ id:'ev-' + d.id + '-' + i, t:'task', at:new Date().toISOString(), by:rpo || 'owner', to:[pm], oid:o ? o.id : '', title:t[0], text:t[2], media:[], urg:1, cm:[], seen:{}, due:add(t[1]), st:'new' }); });
+  save(); }; })(setStage);
+/* ---------- чек-листы для отчётов ---------- */
+var CHK = {
+  start:['Объект передан прорабу, ключи у прораба', 'Видеонаблюдение работает', 'Верстак и место для инструмента организованы', 'Укрыты окна, двери, полы, места общего пользования', 'Наклейка Домилии на входной двери', 'Фото помещений до начала работ (все комнаты)', 'Фото подъезда и лифта до начала работ', 'Временное электричество и вода подключены безопасно'],
+  accept:['Вертикаль стен в допуске класса (замер правилом/уровнем, фото)', 'Плоскость под 2-метровой рейкой в допуске (фото)', 'Плитка: уступы и ширина швов в допуске', 'Углы и примыкания аккуратные, без сколов', 'Скрытые работы приняты и сфотографированы до закрытия', 'Мусор вынесен, объект чистый', 'Замечаний заказчика нет / замечания записаны'],
+  day:['Работы по графику', 'На объекте чисто, мусор собран', 'Материалов хватает на 2 дня вперёд']};
+var CHKN = { day:'Ежедневный отчёт', start:'Запуск объекта', accept:'Приёмка этапа' };
+fNewDlg = (function(f){ return function(kind, preset){ if (kind !== 'report' || (preset && preset.rk)){ var r = f.apply(this, arguments); if (kind === 'report' && preset && preset.rk) chkInject(preset); return r; }
+  var bx = dlg('Какой отчёт?', [h('div', { class:'fnew' }, Object.keys(CHKN).map(function(k){ return h('button', { class:'fn b-report', onclick:function(){ bx.remove(); fNewDlg('report', { rk:k, chk:CHK[k].map(function(t){ return [t, false]; }) }); } }, [ic(k === 'accept' ? 'check' : k === 'start' ? 'bolt' : 'build'), h('div', {}, [h('b', { text:CHKN[k] }), h('small', { text:CHK[k].length + ' пунктов чек-листа' + (k === 'accept' ? ' — для ПМ и РПО' : k === 'start' ? ' — в течение 2 суток после договора' : '') })])]); }))]); }; })(fNewDlg);
+function chkInject(f){ var box = $('.dlg.fdlg .card'); if (!box) return; var t = $('h3', box); if (t) t.firstChild.textContent = CHKN[f.rk];
+  var L = h('div', { class:'fchk' }, [h('b', { text:'Чек-лист' })].concat(f.chk.map(function(it){ var c = h('input', { type:'checkbox' }); c.onchange = function(){ it[1] = c.checked; }; return h('label', { class:'chk' }, [c, it[0]]); })));
+  var ta = $('textarea', box); if (ta) ta.closest('label').before(L); }
+/* чек-лист сохраняется в отчёте */
+function fHook(x, f){ if (x.t === 'report' && f.rk){ x.rk = f.rk; x.chk = f.chk; x.title = (x.oid ? fObjName(x.oid) + ': ' : '') + CHKN[f.rk].toLowerCase() + ' ' + fdate(today()); } }
+/* показ чек-листа в карточке */
+V.fitem = (function(f){ return function(w, id){ f(w, id); var x = byId(FEED(), id); if (!x || !x.chk) return; var c = $('.card', w); if (!c) return; var ok = x.chk.filter(function(i){ return i[1]; }).length;
+  var el = h('div', { class:'fchk view' }, [h('b', { text:'Чек-лист: ' + ok + ' из ' + x.chk.length }) ].concat(x.chk.map(function(i){ return h('div', { class:i[1] ? 'y' : 'n' }, [h('span', { text:i[1] ? '✓' : '—' }), i[0]]); }))); var tx = $('.fi-x', c) || $('.fi-m', c); tx.after(el); }; })(V.fitem);
+/* ---------- экран «Структура и регламент» ---------- */
+V.org = function(w, tab){ tab = tab || 'str'; $('#ttl').textContent = 'Структура и регламент'; orgPos(); regList();
+  var tb = h('div', { class:'tabs' }, [['str', 'Структура'], ['reg', 'Регламент'], ['chk', 'Чек-листы']].map(function(t){ return h('button', { class:tab === t[0] ? 'on' : '', text:t[1], onclick:function(){ go('org', t[0]); } }); })); w.appendChild(tb);
+  if (tab === 'str'){ w.appendChild(h('p', { class:'muted', text:'Должности и подчинение. Пустая должность — вакансия: задачи по регламенту ей не создаются, а отчёты подчинённых уходят выше по цепочке. Назначьте сотрудника, когда он появится, — руководитель и отдел в его карточке проставятся сами.' }));
+    var byD = {}; orgPos().forEach(function(p){ (byD[p.dept] = byD[p.dept] || []).push(p); });
+    Object.keys(byD).forEach(function(dn){ var g = h('div', { class:'orgd' });
+      byD[dn].forEach(function(p){ var hs = holders(p.code), par = posBy(p.parent), bossId = hs[0] ? hs[0].boss : posBoss(p.code), det = h('details', { class:'orgdu' }, [h('summary', { text:'Обязанности (' + (p.duties || []).length + ')' }), h('ul', {}, (p.duties || []).map(function(t){ return h('li', { text:t }); }))]);
+        var add = h('select', { class:'orgadd' }, [h('option', { value:'', text:hs.length ? '+ ещё сотрудник…' : 'Назначить сотрудника…' })].concat(S.crew.filter(function(c){ return !c.to && c.pos !== p.code; }).map(function(c){ return h('option', { value:c.id, text:c.name + (c.pos ? ' (сейчас ' + c.pos + ')' : c.role ? ' · ' + c.role : '') }); })).concat([h('option', { value:'__new', text:'+ Новый сотрудник…' })]));
+        add.onchange = function(){ var v = add.value; if (!v) return; if (v === '__new'){ var n = prompt('Имя и фамилия'); if (!n) { add.value = ''; return; } var ph = prompt('Телефон (можно позже)', '') || ''; var c = { id:uid(), name:n.trim(), role:p.name, phone:ph, brig:'', note:'', from:today(), pos:p.code }; if (typeof payOf === 'function') payOf(c); S.crew.push(c); } else { var c2 = byId(S.crew, v); c2.pos = p.code; if (!c2.role) c2.role = p.name; } orgApply(); save(); go('org', 'str'); };
+        g.appendChild(h('div', { class:'orgp' + (hs.length || p.code === 'Д' ? '' : ' vac') }, [h('div', { class:'orgh' }, [h('span', { class:'orgc', text:p.code }), h('div', {}, [h('b', { text:p.name }), h('small', { text:par ? 'подчиняется: ' + par.code + (bossId ? ' · ' + fName(bossId) : (holders(par.code).length ? '' : par.code === 'Д' ? ' · владелец' : ' (вакансия — выше по цепочке)')) : 'первое лицо' })])]),
+          h('div', { class:'orgw' }, !hs.length && p.code === 'Д' ? [h('span', { class:'orgm' }, [h('b', { text:'Владелец — главный вход' })])] : hs.length ? hs.map(function(c){ return h('span', { class:'orgm' }, [h('a', { href:'#', text:c.name, onclick:function(e){ e.preventDefault(); go('person', c.id); } }), h('button', { title:'Снять с должности', text:'×', onclick:function(){ if (!confirm('Снять ' + c.name + ' с должности ' + p.code + '?')) return; delete c.pos; delete c.posName; orgApply(); save(); go('org', 'str'); } })]); }) : [h('span', { class:'orgv', text:'вакансия' })]), add, det])); });
+      w.appendChild(card(dn, [g])); }); }
+  if (tab === 'reg'){ w.appendChild(h('div', { class:'row' }, [h('label', { class:'chk' }, [(function(){ var c = h('input', { type:'checkbox' }); c.checked = !!S.org.on; c.onchange = function(){ S.org.on = c.checked ? 1 : 0; save(); }; return c; })(), 'Создавать задачи по регламенту автоматически']), h('span', { class:'sp' }), btn('plus', 'Пункт регламента', 'lt', function(){ regList().push({ id:uid(), title:'Новая задача', who:'ПМ', to:'РОП', f:'w:1', on:1 }); save(); go('org', 'reg'); })]));
+    w.appendChild(h('p', { class:'muted', text:'В нужный день каждый сотрудник на должности получает задачу в «Ленте команды». Он отчитывается кнопкой «Сделано», контролёр принимает или возвращает. Если на должности никого нет — задача не создаётся. Когда договор подписан, ПМ автоматически получает задачи «Видеонаблюдение за 1 сутки» и «Запуск объекта за 2 суток».' }));
+    var codes = orgPos().map(function(p){ return [p.code, p.code + ' — ' + p.name]; }), t = h('table', { class:'t regt' });
+    t.appendChild(h('tr', {}, ['', 'Задача', 'Кто делает', 'Кто проверяет', 'Когда', ''].map(function(x){ return h('th', { text:x }); })));
+    regList().forEach(function(r, i){ var on = h('input', { type:'checkbox' }); on.checked = !!r.on; on.onchange = function(){ r.on = on.checked ? 1 : 0; save(); };
+      var ti = h('input', { type:'text', value:r.title }); ti.oninput = function(){ r.title = ti.value; save(); };
+      var who = sel(r, 'who', codes, function(){ save(); go('org', 'reg'); }), to = sel(r, 'to', codes, function(){ save(); }), fq = sel(r, 'f', FRQ, function(){ save(); });
+      var n = holders(r.who).length;
+      t.appendChild(h('tr', { class:r.on ? '' : 'off' }, [h('td', {}, [on]), h('td', {}, [ti, h('small', { class:n ? 'muted' : 'bad', text:n ? 'исполнителей: ' + n : 'должность пустая — задача не создаётся' })]), h('td', {}, [who]), h('td', {}, [to]), h('td', {}, [fq]), h('td', {}, [h('button', { class:'btn lt xs', text:'×', onclick:function(){ regList().splice(i, 1); save(); go('org', 'reg'); } })])])); });
+    w.appendChild(card(null, [t], 'regc')); }
+  if (tab === 'chk') Object.keys(CHK).forEach(function(k){ w.appendChild(card(CHKN[k], [h('ol', {}, CHK[k].map(function(t){ return h('li', { text:t }); })), h('small', { class:'muted', text:'Прораб или ПМ выбирает этот вид в «Ленте команды → Создать → Отчёт с объекта» и отмечает пункты.' })])); });
+};
+VPERM.org = 'crew'; NAVHL.org = 'org';
+NAV2.forEach(function(g){ if (g[0] === 'team') g[2].splice(1, 0, ['org', 'folder', 'Структура и регламент']); });
+/* запуск регламента при входе и раз в час */
+var goOrg0 = go; go = function(v){ var r = goOrg0.apply(this, arguments); if (v === 'feed' || v === 'home'){ try { if (S.org){ orgApply(); regRun(); } } catch(e){ console.warn(e); } } return r; };
+setInterval(function(){ try { if (S.org) regRun(); } catch(e){} }, 3600000);
+/* должность в карточке сотрудника */
+V.person = (function(f){ return function(w, id){ f(w, id); var c = byId(S.crew, id); if (!c || !S.org) return; var s = h('select', {}, [h('option', { value:'', text:'— без должности в структуре —' })].concat(orgPos().map(function(p){ return h('option', { value:p.code, text:p.code + ' — ' + p.name }); }))); s.value = c.pos || ''; s.onchange = function(){ if (s.value) c.pos = s.value; else { delete c.pos; delete c.posName; } orgApply(); save(); go('person', id); };
+  var cs = w.querySelectorAll('.card'); var el = card('Должность в структуре', [field('Должность', s, c.pos ? 'руководитель: ' + (c.boss ? fName(c.boss) : 'директор') : 'руководитель и отдел проставятся по структуре')]); if (cs[1]) cs[1].after(el); else w.appendChild(el); }; })(V.person);
 
 /* ================= ТЕЛЕФОН: таблицы карточками, подписи к ячейкам ================= */
 var MOB = { q:0 };
