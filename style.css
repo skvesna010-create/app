@@ -790,3 +790,6 @@ input.gsi{flex:1;border:0!important;outline:none;box-shadow:none!important;heigh
 .gsr-n{min-width:0;flex:1;font-size:14px}.gsr-n div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gsr-n small{display:block;color:#98A39E;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gsr mark{background:#FFE9A8;color:inherit;border-radius:2px}
 @media (max-width:900px){.gsb{min-width:0;padding:0 10px}.gsb span,.gsb kbd{display:none}}
+/* кнопка «свернуть меню» видна всегда, свёрнутое меню — содержимое на всю ширину */
+.side .collapse{opacity:1!important}
+.wrap{max-width:1400px}html.navmini .wrap{max-width:none}
