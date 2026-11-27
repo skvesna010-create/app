@@ -4124,13 +4124,15 @@ function toRecs(){ var R = {}; Object.keys(S).forEach(function(k){ if (NOSYNC[k]
   if (Array.isArray(v) && !v.length) return;
   if (Array.isArray(v) && (COLLS[k] || v.every(function(x){ return x && typeof x === 'object' && x.id; }))){ v.forEach(function(x){ if (x && x.id) R[k + '|' + x.id] = x; }); }
   else R['_|' + k] = v; }); return R; }
+function canon(x){ if (Array.isArray(x)) return '[' + x.map(canon).join(',') + ']'; if (x && typeof x === 'object'){ return '{' + Object.keys(x).filter(function(k){ return x[k] !== undefined; }).sort().map(function(k){ return JSON.stringify(k) + ':' + canon(x[k]); }).join(',') + '}'; } return x === undefined ? 'null' : JSON.stringify(x); }
 function synState(){ try { return JSON.parse(localStorage.getItem(SYNK) || '{}'); } catch(e){ return {}; } }
 function synSave(x){ try { localStorage.setItem(SYNK, JSON.stringify(x)); } catch(e){} }
 var syncBusy = false, syncT = null;
 function syncSoon(){ if (!SRV.on()) return; clearTimeout(syncT); syncT = setTimeout(syncNow, 1500); }
 function syncNow(){ if (!SRV.on() || syncBusy || !navigator.onLine) return Promise.resolve(); syncBusy = true; var st = synState(); st.h = st.h || {};
   var R = toRecs(), out = [];
-  Object.keys(R).forEach(function(k){ if (/#arr$/.test(k)) return; var j = JSON.stringify(R[k]), hv = hs32(j); if (st.h[k] !== hv){ var p = k.indexOf('|'); out.push({ c:k.slice(0, p), i:k.slice(p + 1), d:R[k], _k:k, _h:hv }); } });
+  if (st.hv !== 2){ Object.keys(st.h).forEach(function(k){ if (k in R && st.h[k] === hs32(JSON.stringify(R[k]))) st.h[k] = hs32(canon(R[k])); }); st.hv = 2; synSave(st); }
+  Object.keys(R).forEach(function(k){ if (/#arr$/.test(k)) return; var hv = hs32(canon(R[k])); if (st.h[k] !== hv){ var p = k.indexOf('|'); out.push({ c:k.slice(0, p), i:k.slice(p + 1), d:R[k], _k:k, _h:hv }); } });
   Object.keys(st.h).forEach(function(k){ if (!(k in R) && !/^_\|/.test(k)){ var p = k.indexOf('|'); out.push({ c:k.slice(0, p), i:k.slice(p + 1), x:1, _k:k }); } });
   var push = out.length ? SRV.req('POST', '/sync', { recs:out.map(function(r){ return { c:r.c, i:r.i, d:r.d, x:r.x }; }) }).then(function(j){ var den = {}; (j.denied || []).forEach(function(d){ den[d.replace(':', '|')] = 1; }); out.forEach(function(r){ if (den[r._k]) return; if (r.x) delete st.h[r._k]; else st.h[r._k] = r._h; }); if (j.denied && j.denied.length) console.warn('Нет прав на запись', j.denied); }) : Promise.resolve();
   return push.then(function(){ return SRV.req('GET', '/sync?since=' + (st.rev || 0)); }).then(function(j){ var ch = applyRecs(j.recs || [], st); st.rev = j.rev; synSave(st); syncMark(); if (ch) afterRemote(); })
@@ -4138,13 +4140,14 @@ function syncNow(){ if (!SRV.on() || syncBusy || !navigator.onLine) return Promi
 }
 function applyRecs(L, st){ var n = 0;
   L.forEach(function(r){ var k = r.c + '|' + r.i;
-    if (r.c === '_'){ if (r.x || COLLS[r.i] || (Array.isArray(r.d) && !r.d.length && Array.isArray(S[r.i]) && S[r.i].length && S[r.i][0] && S[r.i][0].id)) return; var cur = JSON.stringify(S[r.i]); if (cur === JSON.stringify(r.d)){ st.h[k] = hs32(cur); return; } S[r.i] = r.d; st.h[k] = hs32(JSON.stringify(r.d)); n++; return; }
+    if (r.c === '_'){ if (r.x || COLLS[r.i] || (Array.isArray(r.d) && !r.d.length && Array.isArray(S[r.i]) && S[r.i].length && S[r.i][0] && S[r.i][0].id)) return; var cur = canon(S[r.i]), nv = canon(r.d), nh = hs32(nv); if (cur === nv || st.h[k] === nh){ st.h[k] = st.h[k] || nh; return; } S[r.i] = r.d; st.h[k] = nh; n++; return; }
     var arr = S[r.c] = Array.isArray(S[r.c]) ? S[r.c] : [], idx = -1; for (var i = 0; i < arr.length; i++) if (arr[i].id === r.i){ idx = i; break; }
     if (r.x){ if (idx > -1){ arr.splice(idx, 1); n++; } delete st.h[k]; return; }
-    var j = JSON.stringify(r.d); if (idx > -1 && JSON.stringify(arr[idx]) === j){ st.h[k] = hs32(j); return; }
-    if (idx > -1) arr[idx] = r.d; else arr.unshift(r.d); st.h[k] = hs32(j); n++; });
+    var j = canon(r.d), jh = hs32(j); if (idx > -1 && (canon(arr[idx]) === j || st.h[k] === jh)){ if (!st.h[k]) st.h[k] = jh; return; }
+    if (idx > -1){ var o = arr[idx]; Object.keys(o).forEach(function(kk){ delete o[kk]; }); Object.assign(o, r.d); } else arr.unshift(r.d); st.h[k] = jh; n++; });
   if (n) localStorage.setItem(KEY, JSON.stringify(S)); return n; }
-function afterRemote(){ var a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && $('#view').contains(a)){ var t = $('#saved'); if (t) t.textContent = 'Есть изменения от коллег — обновятся, когда закончите ввод'; a.addEventListener('blur', function f(){ a.removeEventListener('blur', f); setTimeout(function(){ go(view, arg); }, 50); }); return; } if (!$('.dlg')) go(view, arg); }
+function afterRemote(){ var a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && $('#view').contains(a)){ var t = $('#saved'); if (t) t.textContent = 'Есть изменения от коллег — обновятся, когда закончите ввод'; a.addEventListener('blur', function f(){ a.removeEventListener('blur', f); setTimeout(reGo, 50); }); return; } if (!$('.dlg')) reGo(); }
+function reGo(){ var y = window.scrollY, v = $('#view'), vy = v ? v.scrollTop : 0; go(view, arg); window.scrollTo(0, y); v = $('#view'); if (v) v.scrollTop = vy; }
 function syncMark(err){ var t = $('#saved'); if (!t || !SRV.on()) return; t.textContent = err ? 'Нет связи с сервером: ' + err : 'Синхронизировано · ' + new Date().toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' }); }
 var save0 = save; save = function(){ save0(); syncSoon(); };
 setInterval(function(){ if (!document.hidden) syncNow(); }, 10000);
