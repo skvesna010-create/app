@@ -4123,7 +4123,7 @@ var pollInbox0 = pollInbox;
 pollInbox = function(force){ if (SRV.on()) S.objs.forEach(function(o){ if (o.cab && !o.cab.issue) o.cab.issue = o.cab.id; if (o.cab && o.cab.ib !== 'srv'){ o.cab.issue = o.cab.id; o.cab.ib = 'srv'; } }); return pollInbox0(force); };
 /* --- синхронизация базы: записи по коллекциям --- */
 function hs32(s){ var h = 2166136261; for (var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + s.length.toString(36); }
-var NOSYNC = { ib:1 }, COLLS = { objs:1, clients:1, deals:1, crew:1, stock:1, gexp:1, ents:1, tasks:1, depts:1, mreq:1 };
+var NOSYNC = { ib:1 }, COLLS = { objs:1, clients:1, deals:1, crew:1, stock:1, gexp:1, ents:1, tasks:1, depts:1, mreq:1, feed:1 };
 function toRecs(){ var R = {}; Object.keys(S).forEach(function(k){ if (NOSYNC[k]) return; var v = S[k];
   if (Array.isArray(v) && !v.length) return;
   if (Array.isArray(v) && (COLLS[k] || v.every(function(x){ return x && typeof x === 'object' && x.id; }))){ v.forEach(function(x){ if (x && x.id) R[k + '|' + x.id] = x; }); }
@@ -5763,7 +5763,7 @@ renderNav = function(){
   var mb = $('#mnu'); mb.innerHTML = ''; mb.appendChild(ic('menu')); mb.onclick = function(){ document.body.classList.toggle('nav'); }; $('#scrim').onclick = function(){ document.body.classList.remove('nav'); };
   /* нижняя панель на телефоне */
   var bar = $('#mbar') || document.body.appendChild(h('nav', { id:'mbar', class:'mbar' })); bar.innerHTML = '';
-  [['home', 'home', 'Главная'], ['objs', 'build', 'Объекты'], ['cal', 'cal', 'Календарь'], ['inbox', 'chat', 'Чат']].filter(function(it){ return navOk(it); }).forEach(function(it){ bar.appendChild(h('button', { 'data-v':it[0], onclick:function(){ go(it[0]); } }, [ic(it[1]), h('span', { text:it[2] })])); });
+  [['home', 'home', 'Главная'], ['feed', 'bolt', 'Лента'], ['objs', 'build', 'Объекты'], ['inbox', 'chat', 'Чат']].filter(function(it){ return navOk(it); }).forEach(function(it){ bar.appendChild(h('button', { 'data-v':it[0], onclick:function(){ go(it[0]); } }, [ic(it[1]), h('span', { text:it[2] })])); });
   bar.appendChild(h('button', { onclick:function(){ document.body.classList.add('nav'); } }, [ic('menu'), h('span', { text:'Меню' })]));
   try { if (uiGet().dark) document.documentElement.classList.add('dark'); } catch(e){}
   var lg = $('#side .lg'); if (lg && !$('#side .collapse')) lg.appendChild(h('button', { class:'collapse', title:'Свернуть меню  [', onclick:function(e){ e.stopPropagation(); navMini(); } }, [ic('chev')]));
@@ -5792,6 +5792,159 @@ var vObjZ = V.obj;
 V.obj = function(w, a){ vObjZ(w, a); var o = byId(S.objs, String(a || '').split('|')[0]); if (!o) return; var head = w.querySelector('.card'); if (!head || head.querySelector('.tabs')) return;
   var d = h('details', { class:'card ohead' }), sm = h('summary', {}, [h('b', { text:client(o.cid).name || 'Клиент не указан' }), h('span', { class:'pill ' + (o.status === 'В работе' ? 'g' : o.status === 'Черновик' ? '' : 'y'), text:o.status }), h('span', { text:[o.prorab ? 'прораб ' + crewName(o.prorab) : '', o.end ? 'сдача ' + fdate(o.end) : ''].filter(Boolean).join(' · ') }), ic('chev')]), inner = h('div', { class:'oin' });
   while (head.firstChild) inner.appendChild(head.firstChild); d.appendChild(sm); d.appendChild(inner); if (window.innerWidth > 860 && (uiGet().ohead2 === 1 || !o.cid)) d.open = true; d.ontoggle = function(){ if (window.innerWidth > 860) uiSet('ohead2', d.open ? 1 : 0); }; head.replaceWith(d); };
+
+/* ================= ЛЕНТА КОМАНДЫ: отчёты с объектов, задачи, чеки, срочные сообщения ================= */
+S.feed = S.feed || [];
+function FEED(){ return S.feed || (S.feed = []); }
+Object.assign(ICO, { bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', cam:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>', play:'<path d="M7 4l13 8-13 8z"/>', send:'<path d="M3 11l18-8-8 18-2-8z"/>' });
+var FT = { report:['Отчёт', 'build'], task:['Задача', 'check'], check:['Чек', 'wallet'], alert:['Срочно', 'alert'] };
+var FCAT = ['Материалы', 'Инструмент', 'Топливо и проезд', 'Доставка и вывоз', 'Реклама', 'Персонал', 'Офис', 'Прочее'];
+var FST = { new:'Новая', work:'В работе', done:'Сделано — на проверке', ok:'Принято', back:'Вернули на доработку' }, CST = { new:'На согласовании', ok:'Согласован', paid:'Оплачен', rej:'Отклонён' };
+function fMe(){ var m = me() || {}; return m.id || 'owner'; }
+function fName(id){ if (!id || id === 'owner') return 'Руководитель'; var c = byId(S.crew, id); return c ? c.name : '—'; }
+function fRole(id){ var c = byId(S.crew, id); return c ? c.role : ''; }
+function fBoss(id){ var c = byId(S.crew, id); if (!c) return ''; var b = typeof bossOf === 'function' ? bossOf(c) : null; return b ? b.id : ''; }
+function fChain(id){ var L = [], x = fBoss(id), g = 0; while (x && L.indexOf(x) < 0 && g++ < 12){ L.push(x); x = fBoss(x); } return L; }
+function fBossy(){ var m = me() || {}; return m.solo || m.role === 'owner' || m.role === 'admin'; }
+function fAcc(){ var m = me() || {}; return m.role === 'accountant' || fBossy(); }
+function fVis(x){ var id = fMe(); if (fBossy()) return true; if (x.by === id || (x.to || []).indexOf(id) > -1) return true; if (fChain(x.by).indexOf(id) > -1) return true; if (x.t === 'check' && fAcc()) return true; return false; }
+function fMine(x){ var id = fMe(); if (fBossy() && x.by !== id && ((x.t === 'alert' && x.urg === 2) || (!fBoss(x.by) && x.t !== 'task'))) return true; return (x.to || []).indexOf(id) > -1 || (x.by !== id && fChain(x.by).indexOf(id) > -1 && x.t !== 'task') || (x.t === 'check' && fAcc() && x.by !== id && x.cst === 'new'); }
+function fNew(x){ var id = fMe(); return x.by !== id && !(x.seen || {})[id] && fMine(x); }
+function fSeen(x){ var id = fMe(); x.seen = x.seen || {}; if (!x.seen[id]){ x.seen[id] = Date.now(); save(); } }
+function fOpen(x){ return (x.t === 'task' && ['ok'].indexOf(x.st) < 0) || (x.t === 'check' && ['paid', 'rej'].indexOf(x.cst) < 0) || (x.t === 'alert' && !x.closed); }
+function fLate(x){ return x.t === 'task' && x.due && x.due < today() && ['done', 'ok'].indexOf(x.st) < 0; }
+function fCount(){ return FEED().filter(function(x){ return fVis(x) && fNew(x); }).length; }
+function fWhen(iso){ var d = new Date(iso), t = today(), ds = iso.slice(0, 10); return (ds === t ? '' : fdate(ds) + ' ') + d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' }); }
+function fObjName(oid){ var o = oid && byId(S.objs, oid); return o ? '№' + o.num + ' ' + (o.addr || o.name) : ''; }
+/* ---------- медиа: фото сжимаем, видео до 20 МБ; хранится на сервере компании ---------- */
+function fAddMedia(list, files, done){ var arr = Array.prototype.slice.call(files || []), n = 0;
+  if (!arr.length) return done();
+  arr.forEach(function(f){ var id = 'f' + uid();
+    if (/^video\//.test(f.type)){ if (f.size > 20 * 1024 * 1024){ toast('Видео больше 20 МБ — снимите короче (до 20–30 секунд)'); if (++n === arr.length) done(); return; }
+      var rd = new FileReader(); rd.onload = function(){ idbPut('doc', { id:id, v:rd.result, name:f.name }).then(function(){ list.push({ id:id, k:'v' }); if (++n === arr.length) done(); }); }; rd.readAsDataURL(f); return; }
+    Promise.all([shrink(f, 1600, 0.82), shrink(f, 360, 0.7)]).then(function(r){ return idbPut('ph', { id:id, full:r[0], th:r[1], at:new Date().toISOString() }); }).then(function(){ list.push({ id:id, k:'p' }); }, function(){ toast('Не удалось прочитать файл ' + f.name); }).then(function(){ if (++n === arr.length) done(); }); }); }
+function fThumbs(media, big){ var box = h('div', { class:'fmed' + (big ? ' big' : '') });
+  (media || []).forEach(function(m){ if (m.k === 'v'){ var vb = h('button', { class:'fv', title:'Видео' }, [ic('play')]); vb.onclick = function(e){ e.stopPropagation(); idbGet('doc', m.id).then(function(r){ if (!r) return toast('Видео ещё загружается'); var b = h('div', { class:'dlg vw', onclick:function(ev){ if (ev.target === b) b.remove(); } }, [h('video', { src:r.v, controls:'', autoplay:'' })]); document.body.appendChild(b); }); }; box.appendChild(vb); return; }
+    var im = h('img', { class:'fph', alt:'' }); idbGet('ph', m.id).then(function(r){ if (r) im.src = big ? r.full : r.th; }); im.onclick = function(e){ e.stopPropagation(); idbGet('ph', m.id).then(function(r){ if (r) viewer(r.full); }); }; box.appendChild(im); });
+  return box; }
+function fMediaBtn(list, redraw){ var inp = h('input', { type:'file', accept:'image/*,video/*', multiple:'', style:'display:none' }); inp.onchange = function(){ var b = $('.fmb-l', wrap); if (b) b.textContent = 'Загружаю…'; fAddMedia(list, inp.files, function(){ inp.value = ''; redraw(); }); };
+  var wrap = h('div', { class:'fmb' }, [inp, h('button', { class:'btn lt', type:'button', onclick:function(){ inp.click(); } }, [ic('cam'), h('span', { class:'fmb-l', text:'Фото / видео' })]), fThumbs(list)]); return wrap; }
+/* ---------- лента ---------- */
+var FF = { tab:'in', oid:'' };
+V.feed = function(w){ $('#ttl').textContent = 'Лента команды';
+  $('#barR').appendChild(btn('plus', 'Создать', '', function(){ fNewDlg(); }));
+  var all = FEED().filter(fVis), id = fMe();
+  if (fBossy() || S.crew.some(function(c){ return fBoss(c.id) === id; })) w.appendChild(fSummary(all));
+  var tabs = [['in', 'Мне', function(x){ return fMine(x) && (fOpen(x) || fNew(x)); }], ['my', 'Я поставил', function(x){ return x.by === id && x.t !== 'report'; }], ['report', 'Отчёты', function(x){ return x.t === 'report'; }], ['task', 'Задачи', function(x){ return x.t === 'task'; }], ['check', 'Чеки', function(x){ return x.t === 'check'; }], ['all', 'Все', function(){ return true; }]];
+  var tb = h('div', { class:'ftabs' }); tabs.forEach(function(t){ var n = all.filter(t[2]).filter(function(x){ return t[0] !== 'in' || true; }).length; tb.appendChild(h('button', { class:FF.tab === t[0] ? 'on' : '', onclick:function(){ FF.tab = t[0]; go('feed'); } }, [t[1], n && t[0] !== 'all' ? h('i', { text:String(n) }) : null])); });
+  var os = h('select', { class:'fobj' }, [h('option', { value:'', text:'Все объекты' })].concat(S.objs.filter(function(o){ return o.status !== 'Отказ'; }).map(function(o){ return h('option', { value:o.id, text:fObjName(o.id) }); }))); os.value = FF.oid; os.onchange = function(){ FF.oid = os.value; go('feed'); };
+  w.appendChild(h('div', { class:'fhead' }, [tb, os]));
+  var f = (tabs.filter(function(t){ return t[0] === FF.tab; })[0] || tabs[0])[2];
+  var L = all.filter(f).filter(function(x){ return !FF.oid || x.oid === FF.oid; }).sort(function(a, b){ return (fNew(b) - fNew(a)) || ((b.urg || 0) - (a.urg || 0)) * (FF.tab === 'in' ? 1 : 0) || (b.at < a.at ? -1 : 1); });
+  var list = h('div', { class:'flist' });
+  if (!L.length) list.appendChild(h('div', { class:'fempty' }, [h('b', { text:FF.tab === 'in' ? 'Всё разобрано' : 'Пока пусто' }), h('span', { text:'Нажмите «Создать», чтобы отправить отчёт с объекта, поставить задачу, сдать чек или написать срочное.' })]));
+  L.slice(0, 200).forEach(function(x){ list.appendChild(fCard(x)); });
+  w.appendChild(list);
+  w.appendChild(h('button', { class:'ffab', title:'Создать', onclick:function(){ fNewDlg(); } }, [ic('plus')]));
+};
+function fCard(x){ var t = FT[x.t] || FT.task, st = x.t === 'task' ? FST[x.st || 'new'] : x.t === 'check' ? CST[x.cst || 'new'] : x.t === 'report' ? (x.ok ? 'Принят' : '') : (x.closed ? 'Закрыто' : '');
+  var to = (x.to || []).map(fName).join(', ');
+  return h('div', { class:'fcard t-' + x.t + (x.urg === 2 ? ' u2' : x.urg === 1 ? ' u1' : '') + (fNew(x) ? ' nw' : '') + (fLate(x) ? ' late' : ''), onclick:function(){ go('fitem', x.id); } }, [
+    h('div', { class:'fc-h' }, [h('span', { class:'fbadge b-' + x.t }, [ic(t[1]), t[0]]), x.urg === 2 && x.t !== 'alert' ? h('span', { class:'furg', text:'срочно' }) : x.urg === 1 ? h('span', { class:'furg u1', text:'важно' }) : null, x.hid ? h('span', { class:'fhid', text:'скрытые работы' }) : null, h('span', { class:'sp' }), h('small', { text:fWhen(x.at) })]),
+    h('div', { class:'fc-t', text:x.title || (x.t === 'check' ? (x.cat || 'Чек') + ' · ' + rub(x.sum) : (x.text || '').split('\n')[0]) }),
+    h('div', { class:'fc-m' }, [h('span', { text:fName(x.by) + (to ? ' → ' + to : '') }), x.oid ? h('span', { text:fObjName(x.oid) }) : null, x.due ? h('span', { class:fLate(x) ? 'bad' : '', text:'срок ' + fdate(x.due) }) : null]),
+    (x.media || []).length ? fThumbs(x.media.slice(0, 5)) : null,
+    h('div', { class:'fc-f' }, [st ? h('span', { class:'fst s-' + (x.st || x.cst || (x.ok ? 'ok' : '')), text:st }) : null, (x.cm || []).length ? h('small', { text:'комментариев: ' + x.cm.length }) : null])]); }
+/* сводка руководителю: объекты без отчёта сегодня, просрочки, чеки */
+function fSummary(all){ var t = today(), id = fMe(), act = S.objs.filter(function(o){ return o.status === 'В работе'; });
+  var rep = {}; all.forEach(function(x){ if (x.t === 'report' && x.at.slice(0, 10) === t && x.oid) rep[x.oid] = 1; });
+  var noRep = act.filter(function(o){ return !rep[o.id]; }), late = all.filter(fLate), chk = all.filter(function(x){ return x.t === 'check' && (x.cst || 'new') === 'new'; }), chkSum = chk.reduce(function(a, x){ return a + (+x.sum || 0); }, 0), urg = all.filter(function(x){ return x.urg === 2 && fOpen(x); });
+  function k(v, l, cls, fn){ return h('button', { class:'fk ' + (cls || ''), onclick:fn }, [h('b', { text:v }), h('span', { text:l })]); }
+  return h('div', { class:'fsum' }, [k(act.length ? (act.length - noRep.length) + ' / ' + act.length : '—', 'объектов с отчётом сегодня', noRep.length ? 'y' : 'g', function(){ if (noRep.length) toast('Нет отчёта: ' + noRep.map(function(o){ return '№' + o.num; }).join(', ')); }), k(String(late.length), 'просроченных задач', late.length ? 'r' : 'g', function(){ FF.tab = 'task'; go('feed'); }), k(chk.length ? rub(chkSum) : '0', 'чеков на согласовании' + (chk.length ? ' (' + chk.length + ')' : ''), chk.length ? 'y' : 'g', function(){ FF.tab = 'check'; go('feed'); }), k(String(urg.length), 'срочных открыто', urg.length ? 'r' : 'g', function(){ FF.tab = 'in'; go('feed'); })]); }
+/* ---------- создание ---------- */
+function fPeople(sel0, multi){ var box = h('div', { class:'fppl' }), id = fMe(), L = S.crew.filter(function(c){ return !c.to && c.id !== id; });
+  var b = fBoss(id); L.sort(function(a, c){ return (c.id === b) - (a.id === b) || (a.name < c.name ? -1 : 1); });
+  function draw(){ box.innerHTML = ''; L.forEach(function(c){ var on = sel0.indexOf(c.id) > -1; box.appendChild(h('button', { type:'button', class:'fp' + (on ? ' on' : ''), onclick:function(){ var i = sel0.indexOf(c.id); if (i > -1) sel0.splice(i, 1); else { if (!multi) sel0.length = 0; sel0.push(c.id); } draw(); } }, [h('b', { text:c.name }), h('small', { text:(c.id === b ? 'мой руководитель · ' : '') + (c.role || '') })])); }); }
+  draw(); return box; }
+function fObjSel(f){ var s = h('select'); s.appendChild(h('option', { value:'', text:'— без объекта —' })); var m = me() || {}; S.objs.filter(function(o){ return ['В работе', 'Утверждена', 'Отправлена', 'Черновик'].indexOf(o.status) > -1; }).sort(function(a, b){ var mine = function(o){ return [o.prorab, o.manager].indexOf(m.id) > -1 ? 1 : 0; }; return mine(b) - mine(a); }).forEach(function(o){ s.appendChild(h('option', { value:o.id, text:fObjName(o.id) + (o.status !== 'В работе' ? ' · ' + o.status : '') })); }); s.value = f.oid || ''; s.onchange = function(){ f.oid = s.value; }; return s; }
+function fNewDlg(kind, preset){ if (!kind){ var bx = dlg('Что создать?', [h('div', { class:'fnew' }, [['report', 'Отчёт с объекта', 'Что сделано, кто был, проблемы, фото и видео, скрытые работы'], ['task', 'Задача', 'Поручение сотруднику со сроком и срочностью'], ['check', 'Чек или расход', 'Фото чека, сумма, объект — бухгалтерии на согласование'], ['alert', 'Срочно', 'Авария, проблема на объекте, нужно решение сейчас']].map(function(k){ return h('button', { class:'fn b-' + k[0], onclick:function(){ bx.remove(); fNewDlg(k[0]); } }, [ic(FT[k[0]][1]), h('div', {}, [h('b', { text:k[1] }), h('small', { text:k[2] })])]); }))]); return; }
+  var m = me() || {}, f = Object.assign({ t:kind, oid:'', title:'', text:'', to:[], due:'', urg:kind === 'alert' ? 2 : 0, sum:'', cat:'Материалы', pay:'own', people:'', hid:false, media:[] }, preset || {});
+  if (kind === 'report'){ var mo = S.objs.filter(function(o){ return o.status === 'В работе' && [o.prorab, o.manager].indexOf(m.id) > -1; }); if (mo.length === 1) f.oid = mo[0].id; }
+  if ((kind === 'alert' || kind === 'report') && !f.to.length){ var b = fBoss(fMe()); if (b && kind === 'alert') f.to.push(b); }
+  var box, mbox = h('div');
+  function mdraw(){ mbox.innerHTML = ''; mbox.appendChild(fMediaBtn(f.media, mdraw)); }
+  mdraw();
+  var urg = h('div', { class:'furgs' }); function udraw(){ urg.innerHTML = ''; [[0, 'Обычно'], [1, 'Важно'], [2, 'Срочно']].forEach(function(u){ urg.appendChild(h('button', { type:'button', class:'fu' + (f.urg === u[0] ? ' on u' + u[0] : ''), onclick:function(){ f.urg = u[0]; udraw(); } }, [u[1]])); }); } udraw();
+  var ta = h('textarea', { rows:kind === 'report' ? '5' : '4', placeholder:kind === 'report' ? 'Что сделано сегодня. Что мешает или что нужно (материалы, решение заказчика).' : kind === 'check' ? 'Что куплено и для чего' : kind === 'alert' ? 'Что случилось и что нужно сейчас' : 'Что нужно сделать, подробности' }); ta.oninput = function(){ f.text = ta.value; };
+  var F = [];
+  if (kind === 'task') F.push(field('Коротко: что сделать', inp(f, 'title', 'text', null, { placeholder:'Например: привезти клей на Репина до 12:00' })));
+  if (kind !== 'task' || true) F.push(field('Объект', fObjSel(f)));
+  if (kind === 'check') F.push(h('div', { class:'grid2' }, [field('Сумма, ₽', inp(f, 'sum', 'number', null, { inputmode:'decimal' })), field('Статья', sel(f, 'cat', FCAT))]), field('Чем платил', sel(f, 'pay', [['own', 'Свои деньги — вернуть мне'], ['acc', 'Подотчётные деньги'], ['card', 'Карта компании'], ['bill', 'Нужно оплатить счёт']])));
+  F.push(field(kind === 'report' ? 'Отчёт' : 'Описание', ta));
+  if (kind === 'report') F.push(h('div', { class:'grid2' }, [field('Людей на объекте', inp(f, 'people', 'number', null, { inputmode:'numeric' })), h('label', { class:'chk fhidc' }, [(function(){ var c = h('input', { type:'checkbox' }); c.onchange = function(){ f.hid = c.checked; }; return c; })(), 'Есть скрытые работы — нужна приёмка до закрытия'])]));
+  F.push(mbox);
+  if (kind === 'task' || kind === 'alert') F.push(field(kind === 'task' ? 'Кому' : 'Кому сообщить', fPeople(f.to, true)));
+  if (kind === 'task') F.push(h('div', { class:'grid2' }, [field('Срок', inp(f, 'due', 'date')), field('Срочность', urg)]));
+  F.push(h('div', { class:'row fact' }, [h('span', { class:'sp' }), btn('send', kind === 'check' ? 'Отправить в бухгалтерию' : kind === 'report' ? 'Отправить отчёт' : 'Отправить', '', function(){
+    if (kind === 'task' && !String(f.title).trim()) return toast('Напишите коротко, что сделать');
+    if ((kind === 'task' || kind === 'alert') && !f.to.length) return toast('Выберите, кому');
+    if (kind === 'check' && !(+f.sum > 0)) return toast('Укажите сумму');
+    if (kind === 'check' && !f.media.length && !confirm('Без фото чека бухгалтерия может не принять расход. Отправить так?')) return;
+    if (kind === 'report' && !String(f.text).trim() && !f.media.length) return toast('Напишите, что сделано, или добавьте фото');
+    var x = { id:uid(), t:kind, at:new Date().toISOString(), by:fMe(), to:f.to.slice(), oid:f.oid, title:String(f.title || '').trim(), text:String(f.text || '').trim(), media:f.media.slice(), urg:+f.urg || 0, cm:[], seen:{} };
+    x.seen[fMe()] = Date.now();
+    if (kind === 'task'){ x.due = f.due; x.st = 'new'; }
+    if (kind === 'check'){ x.sum = +f.sum; x.cat = f.cat; x.pay = f.pay; x.cst = 'new'; x.title = f.cat + ' · ' + rub(+f.sum); }
+    if (kind === 'report'){ x.people = f.people; x.hid = !!f.hid; x.title = (f.oid ? fObjName(f.oid) + ': ' : '') + 'отчёт за ' + fdate(today()); }
+    if (kind === 'alert') x.title = (f.text || '').split('\n')[0].slice(0, 80);
+    FEED().unshift(x); logA(FT[kind][0] + ': ' + (x.title || x.text).slice(0, 60)); save(); box.remove(); toast('Отправлено'); FF.tab = kind === 'report' ? 'report' : kind === 'check' ? 'check' : 'my'; go('feed'); })]));
+  box = dlg(FT[kind][0] === 'Чек' ? 'Чек или расход' : kind === 'report' ? 'Отчёт с объекта' : FT[kind][0], F); box.classList.add('fdlg'); setTimeout(function(){ var q = $('.dlg input[type=text], .dlg textarea'); if (q && window.innerWidth > 700) q.focus(); }, 50); }
+/* ---------- карточка ---------- */
+V.fitem = function(w, id){ var x = byId(FEED(), id); if (!x){ w.appendChild(empty('Запись не найдена или нет доступа')); return; } fSeen(x);
+  $('#ttl').textContent = (FT[x.t] || FT.task)[0]; $('#barR').appendChild(btn('', '← Лента', 'lt', function(){ go('feed'); }));
+  var me0 = fMe(), mine = x.by === me0, toMe = (x.to || []).indexOf(me0) > -1, boss = fBossy() || fChain(x.by).indexOf(me0) > -1;
+  function setS(k, v, note){ x[k] = v; x.cm = x.cm || []; x.cm.push({ at:new Date().toISOString(), by:me0, x:note, sys:1 }); save(); go('fitem', x.id); }
+  var acts = [];
+  if (x.t === 'task'){ var st = x.st || 'new';
+    if (toMe && st === 'new') acts.push(btn('', 'Взял в работу', '', function(){ setS('st', 'work', 'Взял в работу'); }));
+    if (toMe && ['new', 'work', 'back'].indexOf(st) > -1) acts.push(btn('check', 'Сделано', '', function(){ fReply(x, 'Сделано', function(){ x.st = 'done'; }); }));
+    if ((mine || boss) && st === 'done'){ acts.push(btn('check', 'Принять', '', function(){ setS('st', 'ok', 'Принято'); })); acts.push(btn('', 'Вернуть на доработку', 'lt', function(){ fReply(x, 'Вернуть на доработку', function(){ x.st = 'back'; }); })); } }
+  if (x.t === 'check' && (fAcc() || boss) && !mine){ var cs = x.cst || 'new';
+    if (cs === 'new'){ acts.push(btn('check', 'Согласовать', '', function(){ setS('cst', 'ok', 'Согласован'); })); acts.push(btn('', 'Отклонить', 'lt', function(){ fReply(x, 'Причина отказа', function(){ x.cst = 'rej'; }); })); }
+    if (cs === 'ok' && fAcc()) acts.push(btn('wallet', 'Оплачен / возмещён', '', function(){ fPaid(x); })); }
+  if (x.t === 'report' && boss && !mine && !x.ok) acts.push(btn('check', 'Отчёт принят', '', function(){ setS('ok', 1, 'Отчёт принят'); }));
+  if (x.t === 'alert' && !x.closed && (mine || toMe || boss)) acts.push(btn('check', 'Решено — закрыть', '', function(){ fReply(x, 'Как решили', function(){ x.closed = 1; }); }));
+  if (x.t === 'report' && x.hid && x.oid && boss) acts.push(btn('pdf', 'Акт скрытых работ', 'lt', function(){ var o = byId(S.objs, x.oid); if (o) makeDoc('hidden', o); }));
+  if (mine) acts.push(btn('trash', 'Удалить', 'red lt', function(){ if (!confirm('Удалить запись?')) return; FEED().splice(FEED().indexOf(x), 1); save(); go('feed'); }));
+  var st2 = x.t === 'task' ? FST[x.st || 'new'] : x.t === 'check' ? CST[x.cst || 'new'] : x.t === 'report' ? (x.ok ? 'Принят' : 'Не просмотрен руководителем') : (x.closed ? 'Закрыто' : 'Открыто');
+  w.appendChild(card(null, [
+    h('div', { class:'fc-h' }, [h('span', { class:'fbadge b-' + x.t }, [ic((FT[x.t] || FT.task)[1]), (FT[x.t] || FT.task)[0]]), x.urg === 2 ? h('span', { class:'furg', text:'срочно' }) : x.urg === 1 ? h('span', { class:'furg u1', text:'важно' }) : null, x.hid ? h('span', { class:'fhid', text:'скрытые работы' }) : null, h('span', { class:'sp' }), h('span', { class:'fst', text:st2 })]),
+    h('h2', { class:'fi-t', text:x.title || (x.text || '').split('\n')[0] }),
+    h('div', { class:'fi-m' }, [h('span', { html:'<b>' + esc(fName(x.by)) + '</b>' + (fRole(x.by) ? ' · ' + esc(fRole(x.by)) : '') }), (x.to || []).length ? h('span', { text:'→ ' + x.to.map(fName).join(', ') }) : null, h('span', { text:fWhen(x.at) }), x.oid ? h('a', { href:'#', text:fObjName(x.oid), onclick:function(e){ e.preventDefault(); go('obj', x.oid); } }) : null, x.due ? h('span', { class:fLate(x) ? 'bad' : '', text:'срок ' + fdate(x.due) }) : null, x.people ? h('span', { text:'людей на объекте: ' + x.people }) : null]),
+    x.t === 'check' ? h('div', { class:'fi-sum' }, [h('b', { text:rub(x.sum) }), h('span', { text:x.cat + ' · ' + ({ own:'свои деньги — вернуть', acc:'подотчётные', card:'карта компании', bill:'нужно оплатить счёт' })[x.pay || 'own'] })]) : null,
+    x.text ? h('div', { class:'fi-x', text:x.text }) : null,
+    (x.media || []).length ? fThumbs(x.media, true) : null,
+    acts.length ? h('div', { class:'row fi-a' }, acts) : null]));
+  /* комментарии */
+  var cbox = h('div', { class:'fcm' });
+  (x.cm || []).forEach(function(c){ cbox.appendChild(h('div', { class:'fcmi' + (c.sys ? ' sys' : '') + (c.by === me0 ? ' me' : '') }, [h('div', { class:'fcm-h' }, [h('b', { text:fName(c.by) }), h('small', { text:fWhen(c.at) })]), c.x ? h('div', { text:c.x }) : null, (c.media || []).length ? fThumbs(c.media) : null])); });
+  var cf = { x:'', media:[] }, ct = h('textarea', { rows:'2', placeholder:'Комментарий…' }); ct.oninput = function(){ cf.x = ct.value; };
+  var cm = h('div'); function cmd(){ cm.innerHTML = ''; cm.appendChild(fMediaBtn(cf.media, cmd)); } cmd();
+  cbox.appendChild(h('div', { class:'fcm-new' }, [ct, h('div', { class:'row' }, [cm, h('span', { class:'sp' }), btn('send', 'Отправить', '', function(){ if (!cf.x.trim() && !cf.media.length) return; x.cm = x.cm || []; x.cm.push({ at:new Date().toISOString(), by:me0, x:cf.x.trim(), media:cf.media.slice() }); x.seen = {}; x.seen[me0] = Date.now(); save(); go('fitem', x.id); })])]));
+  w.appendChild(card('Обсуждение', [cbox]));
+};
+function fReply(x, ttl, apply){ var f = { x:'', media:[] }, mb = h('div'); function md(){ mb.innerHTML = ''; mb.appendChild(fMediaBtn(f.media, md)); } md();
+  var t = h('textarea', { rows:'3', placeholder:'Комментарий (по желанию)' }); t.oninput = function(){ f.x = t.value; };
+  var box = dlg(ttl, [t, mb, h('div', { class:'row' }, [h('span', { class:'sp' }), btn('check', 'Готово', '', function(){ apply(); x.cm = x.cm || []; x.cm.push({ at:new Date().toISOString(), by:fMe(), x:(ttl + (f.x.trim() ? ': ' + f.x.trim() : '')), media:f.media.slice(), sys:!f.x.trim() && !f.media.length ? 1 : 0 }); x.seen = {}; x.seen[fMe()] = Date.now(); save(); box.remove(); go('fitem', x.id); })])]); box.classList.add('fdlg'); }
+/* чек оплачен → расход в деньги объекта или общий */
+function fPaid(x){ x.cst = 'paid'; x.paidAt = today(); var p = { id:uid(), kind:'out', cat:x.cat === 'Материалы' ? 'Материалы' : x.cat, sum:+x.sum || 0, d:today(), note:'Чек из ленты: ' + (x.text || x.cat).slice(0, 60) + ' · ' + fName(x.by), who:'' };
+  var o = x.oid && byId(S.objs, x.oid); if (o){ o.pays = o.pays || []; o.pays.push(p); } else { p.oid = ''; S.gexp = S.gexp || []; S.gexp.push(p); }
+  x.cm = x.cm || []; x.cm.push({ at:new Date().toISOString(), by:fMe(), x:'Оплачен, расход записан ' + (o ? 'в деньги объекта №' + o.num : 'в общие расходы'), sys:1 }); save(); toast('Расход записан'); go('fitem', x.id); }
+/* меню, нижняя панель, счётчик */
+VPERM.feed = ''; VPERM.fitem = ''; NAVHL.fitem = 'feed';
+NAV2[0][2].splice(1, 0, ['feed', 'bolt', 'Лента команды']);
+navBadges = (function(f){ return function(){ f(); var n = fCount(); $$('#side [data-v="feed"], #mbar [data-v="feed"]').forEach(function(b){ var x = b.querySelector('.bdg'); if (x) x.remove(); if (n) b.appendChild(h('span', { class:'bdg', text:String(n) })); }); }; })(navBadges);
+go = (function(f){ return function(v){ var r = f.apply(this, arguments); try { navBadges(); } catch(e){} return r; }; })(go);
 
 /* ================= ТЕЛЕФОН: таблицы карточками, подписи к ячейкам ================= */
 var MOB = { q:0 };
