@@ -4925,10 +4925,10 @@ function smRe(){ if (!SM.o) return; var v = $('#view'), y = window.scrollY, vy =
 function smNorm(t){ return String(t || '').toLowerCase().replace(/ё/g, 'е'); }
 function smStem(t){ return t.length > 5 ? t.slice(0, -2) : t.length > 4 ? t.slice(0, -1) : t; }
 function smHay(w){ var c = WH[w.id]; if (!c || c[0] !== w.name){ c = WH[w.id] = [w.name, smNorm(w.name + ' ' + (w.code || '') + ' ' + (w.sec || '') + ' ' + (w.sub || ''))]; } return c[1]; }
-function smFind(q){ var U = S.set.wUse || {}, t = smNorm(q).split(/[\s,.;]+/).filter(Boolean).map(smStem);
-  if (!t.length) return S.cat.works.filter(function(w){ return U[w.id]; }).sort(function(a, b){ return U[b.id] - U[a.id]; }).slice(0, 12);
+function smFind(q, ex){ var U = S.set.wUse || {}, t = smNorm(q).split(/[\s,.;]+/).filter(Boolean).map(smStem); ex = ex || {};
+  if (!t.length) return S.cat.works.filter(function(w){ return U[w.id] && !ex[w.id]; }).sort(function(a, b){ return U[b.id] - U[a.id]; }).slice(0, 12);
   var out = [];
-  S.cat.works.forEach(function(w){ var hay = smHay(w); for (var k = 0; k < t.length; k++) if (hay.indexOf(t[k]) < 0) return;
+  S.cat.works.forEach(function(w){ if (ex[w.id]){ return; } var hay = smHay(w); for (var k = 0; k < t.length; k++) if (hay.indexOf(t[k]) < 0) return;
     var nm = smNorm(w.name), sc = 0; if (nm.indexOf(t[0]) === 0) sc += 6; if (w.code && smNorm(w.code) === smNorm(q).trim()) sc += 50;
     t.forEach(function(x){ if (nm.indexOf(x) > -1) sc += 2; if (new RegExp('(^|[^а-яa-z0-9])' + x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(nm)) sc += 1; });
     sc += Math.min(6, U[w.id] || 0); sc -= nm.length / 150; out.push([sc, w]); });
@@ -4942,11 +4942,10 @@ function workSearch(onPick, r){
   var wrap = h('span', { class:'wsw' }, [ic('plus'), i, h('span', { class:'wkb', text:'↑↓ Enter' }), dd]);
   function close(){ open = false; dd.style.display = 'none'; }
   function pick(w, keep){ var q = i.value; if (w){ S.set.wUse = S.set.wUse || {}; S.set.wUse[w.id] = (S.set.wUse[w.id] || 0) + 1; } SMQ[key] = keep ? q : ''; close(); onPick(w, w ? null : q.trim()); }
-  function draw(){ var q = i.value.trim(); res = smFind(q); cur = Math.min(cur, Math.max(0, res.length - 1)); dd.innerHTML = ''; open = true; dd.style.display = 'block';
-    var has = {}; (r && r.lines || []).forEach(function(l){ has[l.wid] = 1; });
-    dd.appendChild(h('div', { class:'wdh', text:q ? (res.length ? 'Найдено: ' + (res.length >= 50 ? '50+' : res.length) + ' · Enter — добавить, Shift+Enter — добавить и искать дальше' : 'В справочнике не нашлось') : (res.length ? 'Вы часто добавляете' : 'Начните печатать название работы или код') }));
-    res.forEach(function(w, k){ var el = h('div', { class:'wi' + (k === cur ? ' on' : '') }, [h('div', { class:'wi-n' }, [h('div', { html:smHi(w.name, q) }), h('small', { text:[w.sec, w.code, w.rule ? 'правило: ' + w.rule : ''].filter(Boolean).join(' · ') })]),
-        has[w.id] ? h('span', { class:'wi-has', text:'уже есть' }) : null, h('div', { class:'wi-p' }, [h('b', { text:w.est ? 'по смете' : rub(w.price) }), h('small', { text:'за ' + w.unit + (S.set.showPay && w.mprice ? ' · мастеру ' + rub(w.mprice) : '') })])]);
+  function draw(){ var q = i.value.trim(); var has = {}, nh = 0; (r && r.lines || []).forEach(function(l){ if (l.wid) has[l.wid] = 1; }); res = smFind(q, has); if (q) nh = smFind(q).length - res.length; cur = Math.min(cur, Math.max(0, res.length - 1)); dd.innerHTML = ''; open = true; dd.style.display = 'block';
+    dd.appendChild(h('div', { class:'wdh' }, [h('span', { text:q ? (res.length ? 'Найдено: ' + (res.length >= 50 ? '50+' : res.length) : (nh > 0 ? 'Всё найденное уже есть в помещении' : 'В справочнике не нашлось')) : (res.length ? 'Часто добавляете' : 'Начните печатать название работы или код') }), q && nh > 0 && res.length ? h('span', { class:'wdh-x', text:'уже в помещении: ' + nh }) : null, h('span', { class:'sp' }), res.length ? h('span', { class:'wdh-k', text:'Enter — добавить · Shift+Enter — и искать дальше' }) : null]));
+    res.forEach(function(w, k){ var el = h('div', { class:'wi' + (k === cur ? ' on' : '') }, [h('div', { class:'wi-n' }, [h('div', { class:'wi-t', html:smHi(w.name, q) }), h('small', { text:[w.sec, w.code, w.rule ? 'правило: ' + w.rule : ''].filter(Boolean).join(' · ') })]),
+        h('div', { class:'wi-p' }, [h('b', { text:w.est ? 'по смете' : rub(w.price) }), h('small', { text:'за ' + w.unit + (S.set.showPay && w.mprice ? ' · мастеру ' + rub(w.mprice) : '') })])]);
       el.onmousedown = function(e){ e.preventDefault(); pick(w, e.shiftKey); }; el.onmouseenter = function(){ cur = k; $$('.wi', dd).forEach(function(x, j){ x.classList.toggle('on', j === k); }); };
       dd.appendChild(el); });
     if (q) dd.appendChild(h('div', { class:'wi wi-own', onmousedown:function(e){ e.preventDefault(); pick(null); } }, [ic('plus'), h('span', { html:'Добавить «<b>' + esc(q) + '</b>» как свою работу' + (res.length ? '' : ' — Enter') })]));

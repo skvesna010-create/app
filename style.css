@@ -746,3 +746,14 @@ table.t tr.clk{cursor:pointer}table.t tr.clk:hover td{background:#F6F9F7}table.t
 
 /* мягкая насыщенность текста */
 b,strong{font-weight:600}
+
+/* выпадающий список поиска работ — компактнее */
+.wdd{border-radius:8px;box-shadow:0 10px 28px rgba(20,40,30,.14);max-height:360px;padding-bottom:4px}
+.wdh{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:500;padding:6px 12px;background:#F7F9F8}
+.wdh .sp{flex:1}.wdh-x{color:#8a6500}.wdh-k{color:#9AA5A0;font-weight:400}
+.wi{gap:14px;padding:6px 12px 6px 10px;border-bottom:0;border-left:2px solid transparent}
+.wi.on{background:#F0F7F3;border-left-color:var(--g)}
+.wi-t{font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wi-n small{font-size:11px;line-height:1.3;color:#98A39E}
+.wi-p{display:flex;align-items:baseline;gap:5px}.wi-p b{display:inline;font-size:13.5px;font-weight:600}.wi-p small{font-size:11px;color:#98A39E}
+.wi-own{border-top:1px solid #EEF2F0;margin-top:2px;padding:8px 12px;font-size:13px}
