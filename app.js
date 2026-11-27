@@ -3421,7 +3421,7 @@ function tabDocs(w, o){
     h('h4', { text:'Заказчик' }), clientFields(cl, function(){ go('obj', o.id + '|docs'); }),
     miss.length ? h('div', { class:'hint y' }, [h('div', { html:'Не заполнено: <b>' + miss.join(', ') + '</b>. В документах будут пустые строки для ручного заполнения.' }), miss.some(function(m){ return /исполнител|самозанят/.test(m); }) ? h('div', { class:'row', style:'margin-top:8px' }, [btn('gear', 'Заполнить реквизиты компании', 'lt xs', function(){ go('company', 'ents'); })]) : null]) : h('div', { class:'hint g', text:'Все данные для документов заполнены.' })]));
   var g = h('div', { class:'docg' });
-  var DGR = [['До начала работ', ['contract', 'smeta', 'graph', 'quality', 'gost', 'memo', 'measure', 'pd', 'keys', 'items']], ['Во время ремонта', ['hidden', 'period', 'stage', 'matrep', 'extra', 'warn', 'receipt']], ['Сдача объекта', ['protocol', 'final', 'guarantee', 'sverka']], ['Если что-то пошло не так', ['cancel']]], dk = {};
+  var DGR = [['До начала работ', ['contract', 'smeta', 'graph', 'quality', 'gost', 'memo', 'measure', 'pd', 'keys', 'items']], ['Во время ремонта', ['hidden', 'period', 'stage', 'matrep', 'extra', 'warn', 'receipt']], ['Сдача объекта', ['protocol', 'final', 'guarantee', 'sverka']], ['Если что-то пошло не так', ['dmgact', 'dmgdeal', 'cancel']]], dk = {};
   DOCS.forEach(function(d){ dk[d[0]] = d; });
   DGR.forEach(function(gr){ var list = gr[1].map(function(k){ var d = dk[k]; delete dk[k]; return d; }).filter(Boolean); if (gr === DGR[DGR.length - 1]) Object.keys(dk).forEach(function(k){ list.push(dk[k]); }); if (!list.length) return; g.appendChild(h('div', { class:'docgh', text:gr[0] }));
   list.forEach(function(d){ g.appendChild(h('div', { class:'docw' }, [h('button', { class:'docb', onclick:function(){ docSink = null; makeDoc(d[0], o); } }, [ic('pdf'), h('div', {}, [h('b', {}, [d[1], o.docEd && o.docEd[d[0]] ? h('span', { class:'dedb', title:'Текст изменён вручную ' + fdate(o.docEd[d[0]].at), text:'✎ изменён' }) : null]), h('small', { text:d[2] })])]), h('button', { class:'docc', title:'Отправить в кабинет клиента' + (SIGN_KINDS.indexOf(d[0]) > -1 ? ' на подпись' : ''), onclick:function(){ docToCab(d[0], o); } }, [ic('sign'), h('span', { text:'В кабинет' })])])); }); });
@@ -5688,6 +5688,37 @@ function itemsAct(o){ var cl = client(o.cid), K = ctr(o), cn = '№ ' + esc(K.nu
     '<p>Деньги, документы и ценности на Объекте не оставляются. Состояние имущества при возврате на место: ' + blank('', 380) + '</p>' + sigBlock(cl), 'opis-imushchestva-' + o.num); }
 DOCS.push(['items', 'Акт описи имущества Заказчика', 'Мебель и вещи: состояние до перемещения, куда, упаковка']);
 makeDoc = (function(f){ return function(kind, o){ if (kind === 'items'){ DOCX = { oid:o.id, k:kind, t:Date.now() }; entCo(o); return itemsAct(o); } return f.apply(this, arguments); }; })(makeDoc);
+/* ---------- спор по имуществу заказчика: акт осмотра повреждений и соглашение о возмещении ---------- */
+function dmgInspect(o){ var f = { items:'' };
+  pick('Акт осмотра повреждённого имущества', [field('Предметы и повреждения — по одному на строку', (function(){ var t = h('textarea', { rows:'6', placeholder:'Зеркало в прихожей — трещина по нижнему краю\nШкаф-купе — вмятина на левом фасаде\nТумбочка — разбухание ДСП по низу' }); t.oninput = function(){ f.items = t.value; }; return t; })())], function(){
+    var cl = client(o.cid), K = ctr(o), cn = '№ ' + esc(K.num) + ' от ' + ldate(K.date), addr = esc(o.addr || cl.addr || o.name);
+    var L = String(f.items || '').split('\n').map(function(x){ return x.trim(); }).filter(Boolean); while (L.length < 5) L.push('');
+    docOpen('Акт осмотра повреждённого имущества', '<h1>Акт осмотра повреждённого имущества</h1><div class="c">к договору подряда ' + cn + '</div>' + cityDate(today()) +
+      '<p>Объект: <b>' + addr + '</b>. Представители Сторон совместно осмотрели имущество Заказчика, о повреждении которого заявил Заказчик, и зафиксировали следующее (фото прилагаются):</p>' +
+      '<table><tr><th>№</th><th>Предмет и заявленное повреждение</th><th>Что установлено при осмотре (размер, место, характер)</th><th>Можно отремонтировать / заменить деталь / только замена</th><th>Год покупки и цена (со слов Заказчика, документы)</th></tr>' +
+      L.map(function(x, i){ return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(x) + '</td><td></td><td></td><td></td></tr>'; }).join('') + '</table>' +
+      '<p>Обстоятельства: имущество находилось на Объекте в период Работ, так как Заказчик не освободил рабочую зону к сроку, о котором его просил Подрядчик (' + blank('', 160) + '). По просьбе Заказчика от ' + blank('', 100) + ' работники Подрядчика переместили имущество: ' + blank('', 300) + '.</p>' +
+      '<p>Имелись ли повреждения и износ до перемещения (фото, переписка): ' + blank('', 360) + '</p>' +
+      '<p>Настоящий акт фиксирует факты осмотра и не является признанием вины или размера ущерба какой-либо из Сторон.</p><p>Особое мнение Подрядчика: ' + blank('', 380) + '</p><p>Особое мнение Заказчика: ' + blank('', 380) + '</p>' + sigBlock(cl), 'akt-osmotra-' + o.num); }); }
+function dmgSettle(o){ var f = { items:'', sum:'', how:'pay', due:addDaysIso(today(), 10) };
+  pick('Соглашение о возмещении ущерба', [
+    field('Повреждённое имущество — по одному на строку', (function(){ var t = h('textarea', { rows:'4' }); t.oninput = function(){ f.items = t.value; }; return t; })()),
+    h('div', { class:'grid3' }, [field('Сумма возмещения, ₽', inp(f, 'sum', 'number')), field('Как возмещаем', sel(f, 'how', [['pay', 'Деньгами'], ['offset', 'Зачётом в оплату работ'], ['repair', 'Ремонтом / заменой деталей']])), field('Срок', inp(f, 'due', 'date'))])], function(){
+    var cl = client(o.cid), K = ctr(o), cn = '№ ' + esc(K.num) + ' от ' + ldate(K.date), addr = esc(o.addr || cl.addr || o.name), sum = +f.sum || 0;
+    var L = String(f.items || '').split('\n').map(function(x){ return x.trim(); }).filter(Boolean);
+    var how = f.how === 'offset' ? 'путём зачёта: на сумму возмещения уменьшается ближайший платёж Заказчика по договору (ст. 410 ГК РФ)' : f.how === 'repair' ? 'путём ремонта или замены повреждённых деталей силами и за счёт Подрядчика (перечень работ — в таблице выше); если ремонт невозможен, Подрядчик выплачивает стоимость, указанную в п. 2' : 'выплатой денежных средств наличными с распиской или переводом на счёт Заказчика';
+    docOpen('Соглашение о возмещении ущерба', '<h1>Соглашение о возмещении ущерба</h1><div class="c">к договору подряда ' + cn + '</div>' + cityDate(today()) +
+      '<p>' + partyIsp() + ', и ' + partyZak(cl) + ', заключили настоящее соглашение о нижеследующем.</p>' +
+      dP('1', 'Заказчик заявил о повреждении своего имущества на Объекте по адресу <b>' + addr + '</b> при его перемещении в период Работ. Перечень имущества и повреждений:') +
+      '<table><tr><th>№</th><th>Имущество и повреждение</th></tr>' + (L.length ? L : ['', '', '']).map(function(x, i){ return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(x) + '</td></tr>'; }).join('') + '</table>' +
+      dP('2', 'Стороны, учитывая состояние и износ имущества, обстоятельства его перемещения по просьбе Заказчика и возможность ремонта, согласовали размер возмещения — <b>' + (sum ? money(sum) : blank('', 160) + ' ₽') + '</b>.') +
+      dP('3', 'Возмещение производится ' + how + ', в срок до ' + ldate(f.due).replace(/\.$/, '') + '.') +
+      dP('4', 'С момента исполнения п. 3 обязательства Подрядчика по возмещению ущерба, причинённого указанному имуществу, считаются исполненными полностью, и Заказчик не имеет к Подрядчику иных требований в связи с повреждением этого имущества, в том числе о возмещении убытков и неустойки.') +
+      dP('5', 'Соглашение заключено для урегулирования разногласий и не означает признания Подрядчиком вины в иных обстоятельствах. Остальные условия договора действуют без изменений.') +
+      dP('6', 'Соглашение составлено в двух экземплярах, по одному для каждой Стороны.') + sigBlock(cl), 'soglashenie-ushcherb-' + o.num); }); }
+DOCS.push(['dmgact', 'Акт осмотра повреждённого имущества', 'Если клиент заявил о порче вещей']);
+DOCS.push(['dmgdeal', 'Соглашение о возмещении ущерба', 'Сумма, способ, закрытие претензии']);
+makeDoc = (function(f){ return function(kind, o){ if (kind === 'dmgact' || kind === 'dmgdeal'){ DOCX = { oid:o.id, k:kind, t:Date.now() }; entCo(o); return kind === 'dmgact' ? dmgInspect(o) : dmgSettle(o); } return f.apply(this, arguments); }; })(makeDoc);
 
 /* ================= АККУРАТНЫЙ ИНТЕРФЕЙС: меню-папки, профиль внизу, нижняя панель на телефоне, порядок вкладок ================= */
 Object.assign(ICO, { chev:'<path d="M9 6l6 6-6 6"/>', folder:'<path d="M3 7h6l2 2h10v10H3z"/>', money:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', team:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5M16 4.5a3 3 0 0 1 0 6M18 14.5c1.6.6 2.7 2.4 3 5.5"/>', dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>' });
